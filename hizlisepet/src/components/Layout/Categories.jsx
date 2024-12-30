@@ -1,5 +1,6 @@
-import { Container, Group, Button, Paper, Stack, Text } from '@mantine/core';
+import { Container, Group, Button, Paper, Stack } from '@mantine/core';
 import { IconChevronDown } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
 
 const categories = [
   { 
@@ -117,6 +118,16 @@ const categories = [
 ];
 
 export function Categories() {
+  const navigate = useNavigate();
+
+  const handleCategoryClick = (categoryName) => {
+    navigate(`/category/${categoryName.toLowerCase().replace(/ & /g, '-')}`);
+  };
+
+  const handleSubcategoryClick = (categoryName, subcategoryName) => {
+    navigate(`/category/${categoryName.toLowerCase().replace(/ & /g, '-')}/${subcategoryName.toLowerCase().replace(/ & /g, '-')}`);
+  };
+
   return (
     <div style={{ 
       width: '100%', 
@@ -148,6 +159,7 @@ export function Categories() {
                 variant="default"
                 size="sm"
                 rightSection={category.subcategories && <IconChevronDown size={14} />}
+                onClick={() => handleCategoryClick(category.name)}
                 styles={{
                   root: {
                     color: '#333',
@@ -188,6 +200,10 @@ export function Categories() {
                         key={subcat}
                         variant="subtle"
                         size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSubcategoryClick(category.name, subcat);
+                        }}
                         styles={{
                           root: {
                             color: '#333',
