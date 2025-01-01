@@ -1,9 +1,20 @@
-import { Group, TextInput, Container, ActionIcon, Menu } from '@mantine/core';
+import { Group, TextInput, Container, ActionIcon, Menu, Button } from '@mantine/core';
 import { IconShoppingCart, IconUser, IconSearch, IconHeart } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export function Navbar() {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Çıkış yapılırken hata oluştu:', error);
+    }
+  };
 
   return (
     <header style={{ 
@@ -44,26 +55,39 @@ export function Navbar() {
               <IconShoppingCart size={20} />
             </ActionIcon>
 
-            <Menu shadow="md" width={200}>
-              <Menu.Target>
-                <ActionIcon variant="subtle" size="lg">
-                  <IconUser size={20} />
-                </ActionIcon>
-              </Menu.Target>
+            {user ? (
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <ActionIcon variant="subtle" size="lg">
+                    <IconUser size={20} />
+                  </ActionIcon>
+                </Menu.Target>
 
-              <Menu.Dropdown>
-                <Menu.Item onClick={() => navigate('/profile')}>
-                  Profilim
-                </Menu.Item>
-                <Menu.Item onClick={() => navigate('/orders')}>
-                  Siparişlerim
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red">
-                  Çıkış Yap
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+                <Menu.Dropdown>
+                  <Menu.Label>Merhaba, {user.email}</Menu.Label>
+                  <Menu.Divider />
+                  <Menu.Item onClick={() => navigate('/profile')}>
+                    Profilim
+                  </Menu.Item>
+                  <Menu.Item onClick={() => navigate('/orders')}>
+                    Siparişlerim
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item color="red" onClick={handleSignOut}>
+                    Çıkış Yap
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            ) : (
+              <Group>
+                <Button variant="subtle" onClick={() => navigate('/login')}>
+                  Giriş Yap
+                </Button>
+                <Button onClick={() => navigate('/signup')}>
+                  Kayıt Ol
+                </Button>
+              </Group>
+            )}
           </Group>
         </Group>
       </Container>

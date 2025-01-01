@@ -5,19 +5,26 @@ import { Navbar } from './components/Layout/Navbar';
 import { Categories } from './components/Layout/Categories';
 import { CategoryPage } from './components/Category/CategoryPage';
 import { HomePage } from './components/Home/HomePage';
+import { AuthProvider } from './context/AuthContext';
+import Login from './components/Auth/Login';
+import SignUp from './components/Auth/SignUp';
 
 function App() {
   return (
     <MantineProvider>
-      <Router>
-        <Navbar />
-        <Categories />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/category/:category" element={<CategoryPage />} />
-          <Route path="/category/:category/:subcategory" element={<CategoryPage />} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <Navbar />
+          <Categories />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/category/:category" element={<CategoryPage />} />
+            <Route path="/category/:category/:subcategory" element={<CategoryPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </MantineProvider>
   );
 }
