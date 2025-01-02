@@ -1,5 +1,5 @@
 import { Group, TextInput, Container, ActionIcon, Menu, Button } from '@mantine/core';
-import { IconUser, IconSearch, IconHeart } from '@tabler/icons-react';
+import { IconUser, IconSearch, IconHeart, IconDashboard } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,6 +69,9 @@ export function Navbar() {
                     Siparişlerim
                   </Menu.Item>
                   <Menu.Divider />
+                  <Menu.Item onClick={() => navigate('/admin')} leftSection={<IconDashboard size={14} />}>
+                    Admin Paneli
+                  </Menu.Item>
                   <Menu.Item color="red" onClick={handleSignOut}>
                     Çıkış Yap
                   </Menu.Item>
