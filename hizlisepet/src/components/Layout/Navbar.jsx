@@ -1,5 +1,5 @@
 import { Group, TextInput, Container, ActionIcon, Menu, Button } from '@mantine/core';
-import { IconShoppingCart, IconUser, IconSearch, IconHeart } from '@tabler/icons-react';
+import { IconUser, IconSearch, IconHeart } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -49,10 +49,6 @@ export function Navbar() {
           <Group>
             <ActionIcon variant="subtle" size="lg">
               <IconHeart size={20} />
-            </ActionIcon>
-
-            <ActionIcon variant="subtle" size="lg" onClick={() => navigate('/cart')}>
-              <IconShoppingCart size={20} />
             </ActionIcon>
 
             {user ? (

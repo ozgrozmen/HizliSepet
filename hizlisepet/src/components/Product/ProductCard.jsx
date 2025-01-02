@@ -1,55 +1,58 @@
-import { Card, Image, Text, Group, Button, Badge, Rating } from '@mantine/core';
+import { Card, Image, Text, Group, Button } from '@mantine/core';
 import { IconShoppingCart } from '@tabler/icons-react';
 
 export function ProductCard({ product }) {
+  const fallbackImage = 'https://placehold.co/400x400?text=Ürün+Görseli';
+
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Card.Section>
-        <Image
-          src={product.image_url}
-          height={200}
-          alt={product.name}
-        />
-      </Card.Section>
+    <Card 
+      shadow="sm" 
+      padding="lg" 
+      radius="md" 
+      withBorder 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        height: '400px',
+        justifyContent: 'space-between'
+      }}
+    >
+      <div>
+        <Card.Section>
+          <div style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
+            <img
+              src={product?.image_url || fallbackImage}
+              alt={product?.name || 'Ürün'}
+              onError={(e) => {
+                e.target.src = fallbackImage;
+              }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          </div>
+        </Card.Section>
 
-      <Group justify="space-between" mt="md" mb="xs">
-        <Text fw={500} lineClamp={2} style={{ height: '50px' }}>
-          {product.name}
+        <Group justify="space-between" mt="md" mb="xs">
+          <Text fw={500} lineClamp={2} style={{ height: '48px' }}>
+            {product?.name || 'Ürün Adı'}
+          </Text>
+        </Group>
+
+        <Text size="sm" c="dimmed" mb="sm">
+          {product?.brand || 'Marka'}
         </Text>
-        {product.discount_rate > 0 && (
-          <Badge color="red" variant="light">
-            %{product.discount_rate} İndirim
-          </Badge>
-        )}
-      </Group>
-
-      <Text size="sm" c="dimmed" mb="sm">
-        {product.brand}
-      </Text>
-
-      <Rating value={product.rating} readOnly fractions={2} mb="sm" />
+      </div>
 
       <Group justify="space-between" align="center">
-        <div>
-          {product.discount_rate > 0 ? (
-            <>
-              <Text size="xl" fw={700} style={{ color: '#FF4D4D' }}>
-                {product.discount_price.toFixed(2)} TL
-              </Text>
-              <Text size="sm" td="line-through" c="dimmed">
-                {product.price.toFixed(2)} TL
-              </Text>
-            </>
-          ) : (
-            <Text size="xl" fw={700}>
-              {product.price.toFixed(2)} TL
-            </Text>
-          )}
-        </div>
+        <Text size="xl" fw={700}>
+          {(product?.price || 0).toFixed(2)} TL
+        </Text>
         <Button 
           variant="light" 
           color="blue" 
-          style={{ flex: 1 }}
           leftSection={<IconShoppingCart size={20} />}
         >
           Sepete Ekle

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { TextInput, PasswordInput, Button, Paper, Title, Text, Container } from '@mantine/core';
 import { useAuth } from '../../context/AuthContext';
 
@@ -27,9 +27,9 @@ export default function SignUp() {
       </Title>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         Zaten hesabınız var mı?{' '}
-        <Text component="a" href="/login" size="sm" c="blue">
+        <Link to="/login" style={{ color: 'var(--mantine-color-blue-filled)' }}>
           Giriş Yap
-        </Text>
+        </Link>
       </Text>
 
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
