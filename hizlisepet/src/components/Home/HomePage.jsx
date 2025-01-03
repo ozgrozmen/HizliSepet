@@ -10,23 +10,12 @@ export function HomePage() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        console.log('Ürünler yükleniyor...');
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .limit(12);
+          .order('created_at', { ascending: false });
 
-        console.log('Supabase yanıtı:', { data, error });
-
-        if (error) {
-          console.error('Ürünler yüklenirken hata:', error);
-          return;
-        }
-
-        if (!data || data.length === 0) {
-          console.log('Hiç ürün bulunamadı');
-        }
-
+        if (error) throw error;
         setProducts(data || []);
       } catch (error) {
         console.error('Ürünler yüklenirken hata:', error);
@@ -41,22 +30,32 @@ export function HomePage() {
   if (loading) {
     return (
       <Center style={{ height: '60vh' }}>
-        <Loader size="xl" />
+        <Loader size={36} />
       </Center>
     );
   }
 
-  console.log('Render edilen ürünler:', products);
-
   return (
-    <Container size="xl" py="xl">
-      <Grid>
-        {products.map((product) => (
-          <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }}>
-            <ProductCard product={product} />
-          </Grid.Col>
-        ))}
-      </Grid>
+    <Container 
+      fluid 
+      p={0} 
+      style={{ 
+        minHeight: 'calc(100vh - 180px)',
+        backgroundColor: '#f8f9fa'
+      }}
+    >
+      <Container fluid px={{ base: 'md', sm: 'lg', lg: 'xl' }}>
+        <Grid 
+          gutter={{ base: 'md', sm: 'lg', lg: 'xl' }}
+          py={{ base: 'xl', sm: '2xl', lg: '3xl' }}
+        >
+          {products.map((product) => (
+            <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }} style={{ height: '350px' }}>
+              <ProductCard product={product} />
+            </Grid.Col>
+          ))}
+        </Grid>
+      </Container>
     </Container>
   );
 } 

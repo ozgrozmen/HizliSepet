@@ -4,6 +4,28 @@ import { Container, Grid, Loader, Center, Text } from '@mantine/core';
 import { supabase } from '../../lib/supabase';
 import { ProductCard } from '../Product/ProductCard';
 
+// Kategori adını veritabanındaki formata dönüştüren yardımcı fonksiyon
+function formatCategoryName(category) {
+  const specialCategories = {
+    'ayakkabı-çanta': 'Ayakkabı & Çanta',
+    'spor-outdoor': 'Spor & Outdoor',
+    'anne-çocuk': 'Anne & Çocuk',
+    'ev-mobilya': 'Ev & Mobilya',
+    'anne-ve-çocuk': 'Anne & Çocuk'  // URL'deki alternatif format
+  };
+
+  // Özel kategori adı varsa onu kullan
+  if (specialCategories[category]) {
+    return specialCategories[category];
+  }
+
+  // Yoksa normal formatlama yap
+  return decodeURIComponent(category)
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export function CategoryPage() {
   const { category, subcategory } = useParams();
   const [products, setProducts] = useState([]);
@@ -13,68 +35,48 @@ export function CategoryPage() {
     async function fetchProducts() {
       setLoading(true);
       
-      // Debug için önce tüm ürünleri ve kategorileri görelim
-      const { data: allProducts } = await supabase.from('products').select('*');
-      console.log('Tüm ürünler:', allProducts);
+      // Önce tüm ürünleri çekelim ve bakalım
+      const { data: allProducts, error: allError } = await supabase
+        .from('products')
+        .select('*');
       
-      // Veritabanındaki benzersiz kategori ve alt kategorileri görelim
-      const uniqueCategories = [...new Set(allProducts.map(p => p.category))];
-      const uniqueSubcategories = [...new Set(allProducts.map(p => p.subcategory))];
-      console.log('Veritabanındaki kategoriler:', uniqueCategories);
-      console.log('Veritabanındaki alt kategoriler:', uniqueSubcategories);
-      
-      // URL'den gelen parametreler
       console.log('URL category:', category);
       console.log('URL subcategory:', subcategory);
+      console.log('Tüm ürünler:', allProducts);
+      console.log('Veritabanındaki kategoriler:', [...new Set(allProducts?.map(p => p.category))]);
+      console.log('Veritabanındaki alt kategoriler:', [...new Set(allProducts?.map(p => p.subcategory))]);
+
+      // URL'den gelen kategori adını düzenleme
+      const formattedCategory = formatCategoryName(category);
+      console.log('Aranacak kategori:', formattedCategory);
 
       let query = supabase.from('products').select('*');
 
-      // Ana kategori için format
-      const decodedCategory = decodeURIComponent(category)
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-
       if (subcategory) {
         // Alt kategori için format
-        const decodedSubcategory = decodeURIComponent(subcategory)
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+        const formattedSubcategory = formatCategoryName(subcategory);
+        console.log('Aranacak alt kategori:', formattedSubcategory);
 
-        console.log('Aranacak kategori:', decodedCategory);
-        console.log('Aranacak alt kategori:', decodedSubcategory);
+        // Alt kategori araması - case insensitive
+        const { data, error } = await query
+          .ilike('category', formattedCategory)
+          .ilike('subcategory', formattedSubcategory);
 
-        // Veritabanındaki eşleşen alt kategoriyi bulalım
-        const matchingSubcategory = uniqueSubcategories.find(
-          sub => sub && sub.toLowerCase() === decodedSubcategory.toLowerCase()
-        );
-
-        if (matchingSubcategory) {
-          console.log('Veritabanında bulunan eşleşen alt kategori:', matchingSubcategory);
-          
-          // Alt kategori araması - case sensitive olmayan arama
-          const { data, error } = await query
-            .ilike('category', decodedCategory)
-            .ilike('subcategory', matchingSubcategory);
-
-          if (error) {
-            console.error('Alt kategori aramasında hata:', error);
-          } else {
-            console.log('Alt kategori sonuçları:', data);
-            setProducts(data || []);
-          }
-        } else {
-          console.log('Veritabanında eşleşen alt kategori bulunamadı');
+        if (error) {
+          console.error('Alt kategori aramasında hata:', error);
           setProducts([]);
+        } else {
+          console.log('Alt kategori sonuçları:', data);
+          setProducts(data || []);
         }
       } else {
-        // Ana kategori araması - case sensitive olmayan arama
+        // Ana kategori araması - case insensitive
         const { data, error } = await query
-          .ilike('category', decodedCategory);
+          .ilike('category', formattedCategory);
 
         if (error) {
           console.error('Ana kategori aramasında hata:', error);
+          setProducts([]);
         } else {
           console.log('Ana kategori sonuçları:', data);
           setProducts(data || []);
@@ -95,23 +97,29 @@ export function CategoryPage() {
     );
   }
 
-  const decodedCategory = decodeURIComponent(category)
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-
-  const decodedSubcategory = subcategory
-    ? decodeURIComponent(subcategory)
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-    : null;
+  const formattedCategory = formatCategoryName(category);
+  const formattedSubcategory = subcategory ? formatCategoryName(subcategory) : null;
 
   return (
-    <Container size="xl" py="xl">
-      <Text size="xl" weight={700} mb="xl">
-        {decodedSubcategory || decodedCategory}
-      </Text>
+    <Container 
+      fluid 
+      p={0} 
+      style={{ 
+        minHeight: 'calc(100vh - 180px)',
+        backgroundColor: '#f8f9fa'
+      }}
+    >
+      <div style={{ 
+        width: '100%', 
+        backgroundColor: 'white', 
+        padding: '2rem 0',
+        marginBottom: '2rem',
+        borderBottom: '1px solid #e9ecef'
+      }}>
+        <Text size="xl" weight={700} ta="center">
+          {formattedSubcategory || formattedCategory}
+        </Text>
+      </div>
       
       {products.length === 0 ? (
         <Center style={{ height: '200px' }}>
@@ -120,13 +128,17 @@ export function CategoryPage() {
           </Text>
         </Center>
       ) : (
-        <Grid>
-          {products.map((product) => (
-            <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }}>
-              <ProductCard product={product} />
-            </Grid.Col>
-          ))}
-        </Grid>
+        <Container fluid px={{ base: 'md', sm: 'lg', lg: 'xl' }}>
+          <Grid 
+            gutter={{ base: 'md', sm: 'lg', lg: 'xl' }}
+          >
+            {products.map((product) => (
+              <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }} style={{ height: '350px' }}>
+                <ProductCard product={product} />
+              </Grid.Col>
+            ))}
+          </Grid>
+        </Container>
       )}
     </Container>
   );

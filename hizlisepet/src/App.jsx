@@ -3,6 +3,7 @@ import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import { Navbar } from './components/Layout/Navbar';
 import { Categories } from './components/Layout/Categories';
+import { Footer } from './components/Layout/Footer';
 import { CategoryPage } from './components/Category/CategoryPage';
 import { HomePage } from './components/Home/HomePage';
 import { AuthProvider } from './context/AuthContext';
@@ -19,40 +20,49 @@ function App() {
     <MantineProvider>
       <AuthProvider>
         <Router>
-          <Routes>
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="products" element={<Products />} />
-              <Route path="categories" element={<AdminCategories />} />
-              <Route path="users" element={<Users />} />
-            </Route>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            minHeight: '100vh'
+          }}>
+            <Routes>
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="products" element={<Products />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="users" element={<Users />} />
+              </Route>
 
-            {/* Public Routes */}
-            <Route path="/" element={
-              <>
-                <Navbar />
-                <Categories />
-                <HomePage />
-              </>
-            } />
-            <Route path="/category/:category" element={
-              <>
-                <Navbar />
-                <Categories />
-                <CategoryPage />
-              </>
-            } />
-            <Route path="/category/:category/:subcategory" element={
-              <>
-                <Navbar />
-                <Categories />
-                <CategoryPage />
-              </>
-            } />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-          </Routes>
+              {/* Public Routes */}
+              <Route path="/" element={
+                <>
+                  <Navbar />
+                  <Categories />
+                  <HomePage />
+                  <Footer />
+                </>
+              } />
+              <Route path="/category/:category" element={
+                <>
+                  <Navbar />
+                  <Categories />
+                  <CategoryPage />
+                  <Footer />
+                </>
+              } />
+              <Route path="/category/:category/:subcategory" element={
+                <>
+                  <Navbar />
+                  <Categories />
+                  <CategoryPage />
+                  <Footer />
+                </>
+              } />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+            </Routes>
+          </div>
         </Router>
       </AuthProvider>
     </MantineProvider>

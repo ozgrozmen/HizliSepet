@@ -21,7 +21,10 @@ export function Navbar() {
       width: '100%', 
       backgroundColor: 'white',
       borderBottom: '1px solid #e9ecef',
-      height: '70px'
+      height: '70px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000
     }}>
       <Container size="xl" h="100%">
         <Group h="100%" justify="space-between" px="md">
