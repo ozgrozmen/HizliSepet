@@ -44,18 +44,17 @@ export function HomePage() {
         backgroundColor: '#f8f9fa'
       }}
     >
-      <Container fluid px={{ base: 'md', sm: 'lg', lg: 'xl' }}>
+      <div style={{ padding: '3rem' }}>
         <Grid 
-          gutter={{ base: 'md', sm: 'lg', lg: 'xl' }}
-          py={{ base: 'xl', sm: '2xl', lg: '3xl' }}
+          gutter={50}
         >
           {products.map((product) => (
-            <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }} style={{ height: '350px' }}>
+            <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }} pb="xl">
               <ProductCard product={product} />
             </Grid.Col>
           ))}
         </Grid>
-      </Container>
+      </div>
     </Container>
   );
 } 

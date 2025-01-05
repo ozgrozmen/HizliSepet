@@ -101,14 +101,7 @@ export function CategoryPage() {
   const formattedSubcategory = subcategory ? formatCategoryName(subcategory) : null;
 
   return (
-    <Container 
-      fluid 
-      p={0} 
-      style={{ 
-        minHeight: 'calc(100vh - 180px)',
-        backgroundColor: '#f8f9fa'
-      }}
-    >
+    <div style={{ width: '100%', backgroundColor: '#f8f9fa' }}>
       <div style={{ 
         width: '100%', 
         backgroundColor: 'white', 
@@ -128,18 +121,31 @@ export function CategoryPage() {
           </Text>
         </Center>
       ) : (
-        <Container fluid px={{ base: 'md', sm: 'lg', lg: 'xl' }}>
+        <Container fluid style={{ maxWidth: '100%', padding: '0 40px', marginBottom: '40px' }}>
           <Grid 
-            gutter={{ base: 'md', sm: 'lg', lg: 'xl' }}
+            gutter={50}
+            style={{ 
+              margin: 0,
+              width: '100%',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '20px'
+            }}
           >
             {products.map((product) => (
-              <Grid.Col key={product.id} span={{ base: 12, xs: 6, sm: 4, md: 3 }} style={{ height: '350px' }}>
+              <Grid.Col 
+                key={product.id} 
+                span={{ base: 12, xs: 6, sm: 4, md: 3 }}
+                style={{
+                  padding: '10px'
+                }}
+              >
                 <ProductCard product={product} />
               </Grid.Col>
             ))}
           </Grid>
         </Container>
       )}
-    </Container>
+    </div>
   );
 } 

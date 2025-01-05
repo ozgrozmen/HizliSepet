@@ -26,7 +26,7 @@ export function Navbar() {
       top: 0,
       zIndex: 1000
     }}>
-      <Container size="xl" h="100%">
+      <Container fluid style={{ maxWidth: '100%', height: '100%', padding: 0 }}>
         <Group h="100%" justify="space-between" px="md">
           {/* Logo */}
           <h1 

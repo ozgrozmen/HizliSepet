@@ -5,15 +5,16 @@ import { Categories } from './Categories';
 
 export function Layout({ children }) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
       <Navbar />
       <Categories />
       <main style={{ 
         flex: 1, 
         backgroundColor: '#f8f9fa', 
-        padding: '5px'
+        padding: 0,
+        width: '100%'
       }}>
-        <Container size="xl">
+        <Container fluid style={{ maxWidth: '100%', padding: 0 }}>
           {children}
         </Container>
       </main>
