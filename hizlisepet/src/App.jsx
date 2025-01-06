@@ -1,11 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
-import { Navbar } from './components/Layout/Navbar';
-import { Categories } from './components/Layout/Categories';
-import { Footer } from './components/Layout/Footer';
+import { Layout } from './components/Layout/Layout';
 import { CategoryPage } from './components/Category/CategoryPage';
 import { HomePage } from './components/Home/HomePage';
+import { ProductDetail } from './components/Product/ProductDetail';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import Login from './components/Auth/Login';
@@ -22,12 +21,7 @@ function App() {
       <AuthProvider>
         <FavoriteProvider>
           <Router>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              minHeight: '100vh',
-              width: '100%'
-            }}>
+            <div className="app-container">
               <Routes>
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminLayout />}>
@@ -39,28 +33,24 @@ function App() {
 
                 {/* Public Routes */}
                 <Route path="/" element={
-                  <div style={{ width: '100%' }}>
-                    <Navbar />
-                    <Categories />
+                  <Layout>
                     <HomePage />
-                    <Footer />
-                  </div>
+                  </Layout>
                 } />
                 <Route path="/category/:category" element={
-                  <div style={{ width: '100%' }}>
-                    <Navbar />
-                    <Categories />
+                  <Layout>
                     <CategoryPage />
-                    <Footer />
-                  </div>
+                  </Layout>
                 } />
                 <Route path="/category/:category/:subcategory" element={
-                  <div style={{ width: '100%' }}>
-                    <Navbar />
-                    <Categories />
+                  <Layout>
                     <CategoryPage />
-                    <Footer />
-                  </div>
+                  </Layout>
+                } />
+                <Route path="/product/:productId" element={
+                  <Layout>
+                    <ProductDetail />
+                  </Layout>
                 } />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
