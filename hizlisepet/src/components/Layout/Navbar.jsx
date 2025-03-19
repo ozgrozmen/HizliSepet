@@ -27,7 +27,7 @@ export function Navbar() {
       zIndex: 1000
     }}>
       <Container fluid style={{ maxWidth: '100%', height: '100%', padding: 0 }}>
-        <Group h="100%" justify="space-between" px="md">
+        <Group style={{ height: '100%', padding: '0 20px' }} position="apart">
           {/* Logo */}
           <h1 
             style={{ 
@@ -50,7 +50,11 @@ export function Navbar() {
 
           {/* Sağ Menü */}
           <Group>
-            <ActionIcon variant="subtle" size="lg">
+            <ActionIcon 
+              variant="subtle" 
+              size="lg" 
+              onClick={() => navigate('/favorites')}
+            >
               <IconHeart size={20} />
             </ActionIcon>
 
@@ -70,6 +74,9 @@ export function Navbar() {
                   </Menu.Item>
                   <Menu.Item onClick={() => navigate('/orders')}>
                     Siparişlerim
+                  </Menu.Item>
+                  <Menu.Item onClick={() => navigate('/favorites')}>
+                    Favorilerim
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item onClick={() => navigate('/admin')} leftSection={<IconDashboard size={14} />}>

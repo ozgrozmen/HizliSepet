@@ -163,11 +163,13 @@ export function ProductDetail() {
         <Grid.Col span={{ base: 12, md: 7 }} p={0}>
           <div style={{ 
             display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
+            justifyContent: 'flex-start', 
+            alignItems: 'flex-start',
             backgroundColor: 'white',
-            height: '100%',
-            padding: '20px'
+            padding: '20px',
+            height: 'auto',
+            position: 'sticky',
+            top: '20px'
           }}>
             <Paper p={0} radius={0} style={{ 
               width: '100%',
@@ -177,7 +179,7 @@ export function ProductDetail() {
                 <Image
                   src={product.image_url || 'https://placehold.co/800x1000?text=Ürün+Görseli'}
                   alt={product.name}
-                  height={500}
+                  height={600}
                   fit="contain"
                   style={{ width: '100%', objectFit: 'contain' }}
                   onClick={() => setZoomModalOpen(true)}

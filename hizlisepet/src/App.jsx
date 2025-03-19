@@ -5,6 +5,7 @@ import { Layout } from './components/Layout/Layout';
 import { CategoryPage } from './components/Category/CategoryPage';
 import { HomePage } from './components/Home/HomePage';
 import { ProductDetail } from './components/Product/ProductDetail';
+import { FavoritesPage } from './components/Favorites/FavoritesPage';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import Login from './components/Auth/Login';
@@ -50,6 +51,11 @@ function App() {
                 <Route path="/product/:productId" element={
                   <Layout>
                     <ProductDetail />
+                  </Layout>
+                } />
+                <Route path="/favorites" element={
+                  <Layout>
+                    <FavoritesPage />
                   </Layout>
                 } />
                 <Route path="/login" element={<Login />} />
