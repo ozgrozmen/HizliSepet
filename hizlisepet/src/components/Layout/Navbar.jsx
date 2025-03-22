@@ -1,11 +1,15 @@
-import { Group, TextInput, Container, ActionIcon, Menu, Button } from '@mantine/core';
-import { IconUser, IconSearch, IconHeart, IconDashboard } from '@tabler/icons-react';
+import { Group, TextInput, Container, ActionIcon, Menu, Button, Loader, Badge } from '@mantine/core';
+import { IconUser, IconSearch, IconHeart, IconDashboard, IconLogin, IconShoppingCart } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 export function Navbar() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
+  const { getCartItemCount } = useCart();
+  
+  const cartItemCount = getCartItemCount();
 
   const handleSignOut = async () => {
     try {
@@ -15,6 +19,16 @@ export function Navbar() {
       console.error('Çıkış yapılırken hata oluştu:', error);
     }
   };
+
+  const handleFavoritesClick = () => {
+    if (!user) {
+      navigate('/login', { state: { returnUrl: '/favorites' } });
+    } else {
+      navigate('/favorites');
+    }
+  };
+
+  console.log('Navbar render - Oturum durumu:', loading ? 'Yükleniyor...' : user ? 'Giriş yapılmış' : 'Giriş yapılmamış');
 
   return (
     <header style={{ 
@@ -53,12 +67,39 @@ export function Navbar() {
             <ActionIcon 
               variant="subtle" 
               size="lg" 
-              onClick={() => navigate('/favorites')}
+              onClick={handleFavoritesClick}
             >
               <IconHeart size={20} />
             </ActionIcon>
 
-            {user ? (
+            <div style={{ position: 'relative' }}>
+              <ActionIcon 
+                variant="subtle" 
+                size="lg" 
+                onClick={() => navigate('/cart')}
+              >
+                <IconShoppingCart size={20} />
+              </ActionIcon>
+              {cartItemCount > 0 && (
+                <Badge 
+                  size="xs" 
+                  color="red" 
+                  variant="filled"
+                  style={{ 
+                    position: 'absolute', 
+                    top: -5, 
+                    right: -5,
+                    pointerEvents: 'none'
+                  }}
+                >
+                  {cartItemCount}
+                </Badge>
+              )}
+            </div>
+
+            {loading ? (
+              <Loader size="sm" />
+            ) : user ? (
               <Menu shadow="md" width={200}>
                 <Menu.Target>
                   <ActionIcon variant="subtle" size="lg">
@@ -78,6 +119,9 @@ export function Navbar() {
                   <Menu.Item onClick={() => navigate('/favorites')}>
                     Favorilerim
                   </Menu.Item>
+                  <Menu.Item onClick={() => navigate('/cart')}>
+                    Sepetim
+                  </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item onClick={() => navigate('/admin')} leftSection={<IconDashboard size={14} />}>
                     Admin Paneli
@@ -89,7 +133,11 @@ export function Navbar() {
               </Menu>
             ) : (
               <Group>
-                <Button variant="subtle" onClick={() => navigate('/login')}>
+                <Button 
+                  variant="subtle" 
+                  leftSection={<IconLogin size={16} />}
+                  onClick={() => navigate('/login')}
+                >
                   Giriş Yap
                 </Button>
                 <Button onClick={() => navigate('/signup')}>

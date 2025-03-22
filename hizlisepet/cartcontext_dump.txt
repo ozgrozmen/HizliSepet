@@ -1,0 +1,272 @@
+﻿import { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+
+const CartContext = createContext();
+
+export function CartProvider({ children }) {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  // KullanÄ±cÄ±nÄ±n sepetini veritabanÄ±ndan Ã§ek
+  useEffect(() => {
+    if (user) {
+      fetchCartItems();
+    } else {
+      // KullanÄ±cÄ± giriÅŸ yapmamÄ±ÅŸsa, yerel depolamadan sepeti yÃ¼kle
+      const localCart = localStorage.getItem('cart');
+      if (localCart) {
+        setCartItems(JSON.parse(localCart));
+      } else {
+        setCartItems([]);
+      }
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Sepet deÄŸiÅŸtiÄŸinde yerel depolamayÄ± gÃ¼ncelle (giriÅŸ yapmamÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in)
+  useEffect(() => {
+    if (!user && cartItems.length > 0) {
+      localStorage.setItem('cart', JSON.stringify(cartItems));
+    }
+  }, [cartItems, user]);
+
+  const fetchCartItems = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('cart')
+        .select('*, products(*)')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Sepet yÃ¼klenirken hata:', error);
+        setLoading(false);
+        return;
+      }
+
+      setCartItems(data || []);
+      setLoading(false);
+    } catch (err) {
+      console.error('Sepet yÃ¼klenirken beklenmeyen hata:', err);
+      setLoading(false);
+    }
+  };
+
+  const addToCart = async (product, quantity = 1, color = null, size = null) => {
+    if (user) {
+      // Oturum aÃ§mÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in veritabanÄ±na kaydet
+      try {
+        // Ã–nce aynÄ± Ã¼rÃ¼nÃ¼n sepette olup olmadÄ±ÄŸÄ±nÄ± kontrol et
+        const existingItemIndex = cartItems.findIndex(
+          item => item.product_id === product.id && 
+                 item.color === color && 
+                 item.size === size
+        );
+
+        if (existingItemIndex >= 0) {
+          // ÃœrÃ¼n zaten sepette, miktarÄ± gÃ¼ncelle
+          const updatedItems = [...cartItems];
+          const newQuantity = updatedItems[existingItemIndex].quantity + quantity;
+
+          const { error } = await supabase
+            .from('cart')
+            .update({ quantity: newQuantity })
+            .eq('id', updatedItems[existingItemIndex].id);
+
+          if (error) {
+            console.error('Sepet gÃ¼ncellenirken hata:', error);
+            return false;
+          }
+
+          updatedItems[existingItemIndex].quantity = newQuantity;
+          setCartItems(updatedItems);
+        } else {
+          // Yeni Ã¼rÃ¼n ekle
+          const { data, error } = await supabase
+            .from('cart')
+            .insert([
+              { 
+                user_id: user.id, 
+                product_id: product.id, 
+                quantity, 
+                color, 
+                size,
+                price: product.price
+              }
+            ])
+            .select('*, products(*)');
+
+          if (error) {
+            console.error('Sepete eklenirken hata:', error);
+            return false;
+          }
+
+          setCartItems([...cartItems, ...data]);
+        }
+
+        return true;
+      } catch (err) {
+        console.error('Sepete ekleme hatasÄ±:', err);
+        return false;
+      }
+    } else {
+      // Oturum aÃ§mamÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in yerel depolamada sakla
+      const existingItemIndex = cartItems.findIndex(
+        item => item.product_id === product.id && 
+               item.color === color && 
+               item.size === size
+      );
+
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...cartItems];
+        updatedItems[existingItemIndex].quantity += quantity;
+        setCartItems(updatedItems);
+      } else {
+        setCartItems([
+          ...cartItems,
+          {
+            id: Date.now().toString(),
+            product_id: product.id,
+            product: product,
+            quantity,
+            color,
+            size,
+            price: product.price
+          }
+        ]);
+      }
+      
+      return true;
+    }
+  };
+
+  const removeFromCart = async (itemId) => {
+    if (user) {
+      // Oturum aÃ§mÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in veritabanÄ±ndan sil
+      try {
+        const { error } = await supabase
+          .from('cart')
+          .delete()
+          .eq('id', itemId);
+
+        if (error) {
+          console.error('Sepetten silinirken hata:', error);
+          return false;
+        }
+
+        setCartItems(cartItems.filter(item => item.id !== itemId));
+        return true;
+      } catch (err) {
+        console.error('Sepetten silme hatasÄ±:', err);
+        return false;
+      }
+    } else {
+      // Oturum aÃ§mamÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in yerel depolamadan sil
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+      return true;
+    }
+  };
+
+  const updateQuantity = async (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      return removeFromCart(itemId);
+    }
+
+    if (user) {
+      // Oturum aÃ§mÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in veritabanÄ±nda gÃ¼ncelle
+      try {
+        const { error } = await supabase
+          .from('cart')
+          .update({ quantity: newQuantity })
+          .eq('id', itemId);
+
+        if (error) {
+          console.error('Miktar gÃ¼ncellenirken hata:', error);
+          return false;
+        }
+
+        setCartItems(
+          cartItems.map(item => 
+            item.id === itemId ? { ...item, quantity: newQuantity } : item
+          )
+        );
+        return true;
+      } catch (err) {
+        console.error('Miktar gÃ¼ncelleme hatasÄ±:', err);
+        return false;
+      }
+    } else {
+      // Oturum aÃ§mamÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in yerel depolamada gÃ¼ncelle
+      setCartItems(
+        cartItems.map(item => 
+          item.id === itemId ? { ...item, quantity: newQuantity } : item
+        )
+      );
+      return true;
+    }
+  };
+
+  const clearCart = async () => {
+    if (user) {
+      // Oturum aÃ§mÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in veritabanÄ±ndan sepeti temizle
+      try {
+        const { error } = await supabase
+          .from('cart')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Sepet temizlenirken hata:', error);
+          return false;
+        }
+
+        setCartItems([]);
+        return true;
+      } catch (err) {
+        console.error('Sepet temizleme hatasÄ±:', err);
+        return false;
+      }
+    } else {
+      // Oturum aÃ§mamÄ±ÅŸ kullanÄ±cÄ±lar iÃ§in yerel depolamayÄ± temizle
+      setCartItems([]);
+      localStorage.removeItem('cart');
+      return true;
+    }
+  };
+
+  const getCartTotal = () => {
+    return cartItems.reduce((total, item) => {
+      // ÃœrÃ¼n fiyatÄ±nÄ± alÄ±rken, Ã¼rÃ¼n bilgisi farklÄ± formatta olabilir
+      const price = item.price || (item.product ? item.product.price : 0);
+      return total + (price * item.quantity);
+    }, 0);
+  };
+
+  const getCartItemCount = () => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  return (
+    <CartContext.Provider
+      value={{
+        cartItems,
+        loading,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        getCartTotal,
+        getCartItemCount
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart() {
+  return useContext(CartContext);
+} 

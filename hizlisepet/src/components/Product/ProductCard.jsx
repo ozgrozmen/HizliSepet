@@ -1,14 +1,19 @@
 import { Card, Image, Text, Button, Group, ActionIcon } from '@mantine/core';
-import { IconHeart, IconHeartFilled } from '@tabler/icons-react';
+import { IconHeart, IconHeartFilled, IconShoppingCart } from '@tabler/icons-react';
 import { useFavorite } from '../../context/FavoriteContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { notifications } from '@mantine/notifications';
 
 export function ProductCard({ product }) {
   const { toggleFavorite, isFavorite } = useFavorite();
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const navigate = useNavigate();
   const fallbackImage = 'https://placehold.co/400x400?text=Ürün+Görseli';
+  const [loading, setLoading] = useState(false);
 
   const handleFavoriteClick = async (e) => {
     e.preventDefault();
@@ -20,6 +25,50 @@ export function ProductCard({ product }) {
     }
 
     await toggleFavorite(product.id);
+  };
+
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      setLoading(true);
+      const success = await addToCart(product, 1);
+      
+      if (success) {
+        notifications.show({
+          title: 'Başarılı',
+          message: `${product.name} sepete eklendi`,
+          color: 'green',
+          autoClose: 3000,
+          withCloseButton: true,
+          icon: <IconShoppingCart size={20} />
+        });
+        
+        setTimeout(() => {
+          setLoading(false);
+        }, 500);
+      } else {
+        setLoading(false);
+        notifications.show({
+          title: 'Hata',
+          message: 'Ürün sepete eklenirken bir hata oluştu',
+          color: 'red',
+          autoClose: 3000,
+          withCloseButton: true
+        });
+      }
+    } catch (error) {
+      console.error('Sepete ekleme hatası:', error);
+      setLoading(false);
+      notifications.show({
+        title: 'Hata',
+        message: 'Ürün sepete eklenirken bir hata oluştu',
+        color: 'red',
+        autoClose: 3000,
+        withCloseButton: true
+      });
+    }
   };
 
   return (
@@ -94,11 +143,10 @@ export function ProductCard({ product }) {
             color="blue"
             size="sm"
             style={{ flex: '0 0 auto' }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Sepete ekleme işlemi
-            }}
+            onClick={handleAddToCart}
+            leftSection={<IconShoppingCart size={16} />}
+            loading={loading}
+            disabled={loading}
           >
             Sepete Ekle
           </Button>

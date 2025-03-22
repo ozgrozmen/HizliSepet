@@ -15,6 +15,7 @@
     "@mantine/core": "^7.15.2",
     "@mantine/form": "^7.15.2",
     "@mantine/hooks": "^7.15.2",
+    "@mantine/notifications": "^7.17.2",
     "@supabase/supabase-js": "^2.47.10",
     "@tabler/icons-react": "^3.26.0",
     "embla-carousel-react": "^8.5.1",

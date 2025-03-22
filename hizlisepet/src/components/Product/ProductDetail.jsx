@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Container, 
   Grid, 
@@ -19,7 +19,8 @@ import {
   Rating,
   Avatar,
   Textarea,
-  Divider
+  Divider,
+  Notification
 } from '@mantine/core';
 import { 
   IconZoomIn,
@@ -30,17 +31,21 @@ import {
   IconRulerMeasure,
   IconStar,
   IconStarFilled,
-  IconMessageCircle
+  IconMessageCircle,
+  IconCheck,
+  IconShoppingCart
 } from '@tabler/icons-react';
 import { supabase } from '../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
 
 export function ProductDetail() {
   const { productId } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedColor, setSelectedColor] = useState(null);
-  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState('Siyah');
+  const [selectedSize, setSelectedSize] = useState('M');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -48,7 +53,7 @@ export function ProductDetail() {
   const [comment, setComment] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [suggestedProducts, setSuggestedProducts] = useState([]);
-  const navigate = useNavigate();
+  const [addedToCart, setAddedToCart] = useState(false);
 
   const colors = [
     { name: 'Siyah', value: '#000000' },
@@ -131,13 +136,39 @@ export function ProductDetail() {
     setComment('');
   };
 
-  const handleAddToCart = () => {
-    if (!selectedSize || !selectedColor) {
-      alert('Lütfen renk ve beden seçimi yapınız.');
-      return;
+  const handleAddToCart = async () => {
+    console.log('Sepete eklenecek ürün:', product);
+    console.log('Miktar:', quantity);
+    console.log('Renk:', selectedColor);
+    console.log('Beden:', selectedSize);
+
+    // Ürünü sepete ekle
+    try {
+      const success = await addToCart(
+        product, 
+        quantity, 
+        selectedColor, 
+        selectedSize
+      );
+
+      console.log('Sepete ekleme sonucu:', success);
+
+      if (success) {
+        setAddedToCart(true);
+        setTimeout(() => {
+          setAddedToCart(false);
+        }, 3000);
+      } else {
+        alert('Ürün sepete eklenirken bir hata oluştu.');
+      }
+    } catch (error) {
+      console.error('Sepete ekleme işleminde hata:', error);
+      alert('Ürün sepete eklenirken bir hata oluştu: ' + error.message);
     }
-    // Burada sepete ekleme işlemi yapılacak
-    alert('Ürün sepete eklendi!');
+  };
+
+  const goToCart = () => {
+    navigate('/cart');
   };
 
   // Örnek ürün özellikleri
@@ -343,20 +374,34 @@ export function ProductDetail() {
             </Paper>
 
             {/* Sepete Ekle */}
-            <Button 
-              color="blue" 
-              size="xl" 
-              fullWidth
-              onClick={handleAddToCart}
-              disabled={!selectedSize || !selectedColor}
-              style={{
-                height: '56px',
-                fontSize: '18px',
-                fontWeight: 600
-              }}
-            >
-              {!selectedSize || !selectedColor ? 'Renk ve Beden Seçiniz' : 'Sepete Ekle'}
-            </Button>
+            <Group grow>
+              <Button 
+                color="blue" 
+                size="xl" 
+                onClick={handleAddToCart}
+                style={{
+                  height: '56px',
+                  fontSize: '18px',
+                  fontWeight: 600
+                }}
+                leftSection={<IconShoppingCart size={20} />}
+              >
+                Sepete Ekle
+              </Button>
+              
+              <Button 
+                color="green" 
+                size="xl" 
+                onClick={goToCart}
+                style={{
+                  height: '56px',
+                  fontSize: '18px',
+                  fontWeight: 600
+                }}
+              >
+                Sepete Git
+              </Button>
+            </Group>
 
             {/* Değerlendirmeler ve Yorumlar */}
             <Paper p="lg" radius="md" withBorder>
@@ -475,6 +520,33 @@ export function ProductDetail() {
             </div>
           </Container>
         </div>
+      )}
+
+      {/* Sepete Eklendi Bildirimi */}
+      {addedToCart && (
+        <Notification
+          style={{
+            position: 'fixed',
+            bottom: 20,
+            right: 20,
+            zIndex: 9999
+          }}
+          title="Ürün sepete eklendi"
+          color="green"
+          icon={<IconCheck size={18} />}
+          onClose={() => setAddedToCart(false)}
+        >
+          {product.name} sepete eklendi. 
+          <Button 
+            variant="white" 
+            size="xs" 
+            compact 
+            ml="md"
+            onClick={goToCart}
+          >
+            Sepete Git
+          </Button>
+        </Notification>
       )}
 
       {/* Modaller */}

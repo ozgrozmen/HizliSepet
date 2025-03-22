@@ -9,57 +9,106 @@ import {
   Button, 
   Loader, 
   Center,
-  Stack
+  Stack,
+  Alert
 } from '@mantine/core';
 import { ProductCard } from '../Product/ProductCard';
 import { useFavorite } from '../../context/FavoriteContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { IconMoodSad } from '@tabler/icons-react';
+import { IconMoodSad, IconInfoCircle, IconAlertCircle } from '@tabler/icons-react';
 
 export function FavoritesPage() {
   const { favorites } = useFavorite();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
+    if (authLoading) {
+      console.log('Oturum yükleniyor, bekliyor...');
       return;
     }
 
+    if (!user) {
+      console.log('Kullanıcı giriş yapmamış, yönlendiriliyor...');
+      navigate('/login', { state: { returnUrl: '/favorites' } });
+      return;
+    }
+
+    console.log('Kullanıcı giriş yapmış:', user.email);
+    console.log('Favoriler:', favorites);
+    
     fetchFavoriteProducts();
-  }, [user, favorites]);
+  }, [user, favorites, authLoading, navigate]);
 
   const fetchFavoriteProducts = async () => {
-    if (!favorites || favorites.length === 0) {
-      setFavoriteProducts([]);
+    try {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      if (!favorites || favorites.length === 0) {
+        console.log('Favori ürün bulunmuyor');
+        setFavoriteProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      console.log('Favori ürünler getiriliyor:', favorites);
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', favorites);
+
+      if (error) {
+        console.error('Favori ürünler çekilirken hata:', error.message);
+        setError(`Favoriler yüklenirken hata oluştu: ${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Favori ürünler yüklendi:', data?.length || 0);
+      setFavoriteProducts(data || []);
       setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .in('id', favorites);
-
-    if (error) {
-      console.error('Favori ürünler çekilirken hata:', error);
+    } catch (err) {
+      console.error('Beklenmeyen bir hata oluştu:', err.message);
+      setError(`Beklenmeyen bir hata oluştu: ${err.message}`);
       setLoading(false);
-      return;
     }
-
-    setFavoriteProducts(data);
-    setLoading(false);
   };
 
+  if (authLoading) {
+    return (
+      <Container size="xl" py="xl">
+        <Center style={{ height: '60vh' }}>
+          <Stack align="center" spacing="md">
+            <Loader size="lg" />
+            <Text>Oturum kontrol ediliyor...</Text>
+          </Stack>
+        </Center>
+      </Container>
+    );
+  }
+
   if (!user) {
-    return null; // Kullanıcı girişi yoksa hiçbir şey gösterme (nasılsa navigate çalışacak)
+    return (
+      <Container size="xl" py="xl">
+        <Alert 
+          icon={<IconInfoCircle size={16} />} 
+          title="Giriş gerekli" 
+          color="blue"
+        >
+          Bu sayfayı görüntülemek için giriş yapmanız gerekiyor. Giriş sayfasına yönlendiriliyorsunuz...
+        </Alert>
+      </Container>
+    );
   }
 
   if (loading) {
@@ -68,6 +117,29 @@ export function FavoritesPage() {
         <Center style={{ height: '60vh' }}>
           <Loader size="lg" />
         </Center>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container size="xl" py="xl">
+        <Alert 
+          icon={<IconAlertCircle size={16} />} 
+          title="Bir hata oluştu" 
+          color="red"
+        >
+          {error}
+        </Alert>
+        <Button 
+          onClick={() => {
+            setError(null);
+            fetchFavoriteProducts();
+          }}
+          mt="md"
+        >
+          Tekrar Dene
+        </Button>
       </Container>
     );
   }
