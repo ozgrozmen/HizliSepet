@@ -37,8 +37,11 @@ export function CartProvider({ children }) {
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('cart')
-        .select('*, products(*)')
+        .from('cart_items')
+        .select(`
+          *,
+          product:products(*)
+        `)
         .eq('user_id', user.id);
 
       if (error) {
@@ -85,7 +88,7 @@ export function CartProvider({ children }) {
             const newQuantity = updatedItems[existingItemIndex].quantity + quantity;
 
             const { error } = await supabase
-              .from('cart')
+              .from('cart_items')
               .update({ quantity: newQuantity })
               .eq('id', updatedItems[existingItemIndex].id);
 
@@ -110,7 +113,7 @@ export function CartProvider({ children }) {
             });
             
             const { data, error } = await supabase
-              .from('cart')
+              .from('cart_items')
               .insert([
                 { 
                   user_id: user.id, 
@@ -121,7 +124,7 @@ export function CartProvider({ children }) {
                   price: product.price
                 }
               ])
-              .select('*, products(*)');
+              .select();
 
             if (error) {
               console.error('Sepete eklenirken hata:', error);
@@ -129,8 +132,26 @@ export function CartProvider({ children }) {
               return addToCartLocally(product, quantity, color, size);
             }
 
-            console.log('Supabase\'den dönen veri:', data);
-            setCartItems([...cartItems, ...data]);
+            // Eklenen ürün bilgilerini almak için ikinci bir sorgu
+            if (data && data.length > 0) {
+              const cartItem = data[0];
+              const { data: productData, error: productError } = await supabase
+                .from('products')
+                .select('*')
+                .eq('id', product.id)
+                .single();
+              
+              if (!productError && productData) {
+                const newItem = {
+                  ...cartItem,
+                  product: productData
+                };
+                setCartItems([...cartItems, newItem]);
+              } else {
+                // Ürün detayları alınamadıysa, sadece sepet öğesini ekle
+                setCartItems([...cartItems, ...data]);
+              }
+            }
           }
 
           console.log('Ürün başarıyla sepete eklendi');
@@ -204,7 +225,7 @@ export function CartProvider({ children }) {
           console.log('Oturum açmış kullanıcı için sepetten silme işlemi başlatılıyor');
           
           const { error } = await supabase
-            .from('cart')
+            .from('cart_items')
             .delete()
             .eq('id', itemId);
 
@@ -257,49 +278,42 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = async (itemId, newQuantity) => {
-    console.log('updateQuantity çağrıldı:', { itemId, newQuantity });
-
+    console.log('updateQuantity çağrıldı', { itemId, newQuantity });
+    
+    // 0 veya negatif değerler için sepetten kaldır
     if (newQuantity <= 0) {
-      console.log('Miktar 0 veya daha az, ürün sepetten kaldırılıyor');
       return removeFromCart(itemId);
     }
 
     try {
       if (user) {
-        // Oturum açmış kullanıcılar için veritabanında güncelle
         try {
           console.log('Oturum açmış kullanıcı için miktar güncelleniyor');
           
           const { error } = await supabase
-            .from('cart')
+            .from('cart_items')
             .update({ quantity: newQuantity })
             .eq('id', itemId);
 
           if (error) {
-            console.error('Supabase miktar güncellenirken hata:', error);
-            // Veritabanı hatası durumunda yerel işleme geç
+            console.error('Miktar güncellenirken hata:', error);
             return updateQuantityLocally(itemId, newQuantity);
           }
 
-          console.log('Miktar veritabanında güncellendi');
-          setCartItems(
-            cartItems.map(item => 
-              item.id === itemId ? { ...item, quantity: newQuantity } : item
-            )
+          const updatedItems = cartItems.map(item => 
+            item.id === itemId ? { ...item, quantity: newQuantity } : item
           );
+          setCartItems(updatedItems);
           return true;
         } catch (err) {
           console.error('Miktar güncelleme hatası, yerel işleme geçiliyor:', err);
-          // Herhangi bir hata durumunda yerel işleme geç
           return updateQuantityLocally(itemId, newQuantity);
         }
       } else {
-        // Kullanıcı giriş yapmamışsa direkt lokalden güncelle
         return updateQuantityLocally(itemId, newQuantity);
       }
     } catch (err) {
       console.error('Beklenmeyen miktar güncelleme hatası:', err);
-      // Son çare olarak yine lokali güncellemeyi dene
       return updateQuantityLocally(itemId, newQuantity);
     }
   };
@@ -326,38 +340,37 @@ export function CartProvider({ children }) {
     }
   };
 
+  // Sepeti tamamen temizle
   const clearCart = async () => {
-    console.log('Sepet temizleme işlemi başlatıldı');
+    console.log('clearCart çağrıldı');
+    
     try {
       if (user) {
-        console.log('Oturum açmış kullanıcı için sepet temizleniyor...');
         try {
+          console.log('Oturum açmış kullanıcı için sepet temizleniyor');
+          
           const { error } = await supabase
-            .from('cart')
+            .from('cart_items')
             .delete()
             .eq('user_id', user.id);
-          
+
           if (error) {
-            console.error('Supabase sepet temizleme hatası:', error);
-            clearCartLocally();
-            return false;
+            console.error('Sepet temizlenirken hata:', error);
+            return clearCartLocally();
           }
-          
-          console.log('Supabase sepet başarıyla temizlendi');
+
           setCartItems([]);
           return true;
-        } catch (error) {
-          console.error('Supabase sepet temizleme exception:', error);
-          clearCartLocally();
-          return false;
+        } catch (err) {
+          console.error('Sepet temizleme hatası, yerel işleme geçiliyor:', err);
+          return clearCartLocally();
         }
       } else {
-        console.log('Misafir kullanıcı için sepet temizleniyor...');
         return clearCartLocally();
       }
-    } catch (error) {
-      console.error('Genel sepet temizleme hatası:', error);
-      return false;
+    } catch (err) {
+      console.error('Beklenmeyen sepet temizleme hatası:', err);
+      return clearCartLocally();
     }
   };
 

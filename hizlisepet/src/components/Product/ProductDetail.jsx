@@ -54,6 +54,12 @@ export function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [suggestedProducts, setSuggestedProducts] = useState([]);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+
+  // Değerlendirmeler ve özellikler için başlangıçta gösterilecek miktar
+  const initialReviewsToShow = 2;
+  const initialFeaturesToShow = 4;
 
   const colors = [
     { name: 'Siyah', value: '#000000' },
@@ -187,32 +193,46 @@ export function ProductDetail() {
     <div style={{ 
       width: '100vw',
       margin: '0 -20px',
-      backgroundColor: '#f8f9fa'
+      backgroundColor: 'white',
+      paddingTop: '20px'
     }}>
       <Grid gutter={0} style={{ margin: 0 }}>
         {/* Sol Taraf - Ürün Görseli */}
         <Grid.Col span={{ base: 12, md: 7 }} p={0}>
           <div style={{ 
             display: 'flex', 
-            justifyContent: 'flex-start', 
-            alignItems: 'flex-start',
+            justifyContent: 'center', 
+            alignItems: 'center',
             backgroundColor: 'white',
-            padding: '20px',
-            height: 'auto',
-            position: 'sticky',
-            top: '20px'
+            padding: '15px',
+            marginTop: '30px',
+            height: 'auto'
           }}>
-            <Paper p={0} radius={0} style={{ 
+            <Paper p={0} radius={8} shadow="md" style={{ 
               width: '100%',
-              maxWidth: '500px'
+              maxWidth: '500px',
+              margin: '0 auto',
+              border: '1px solid #e9ecef',
+              overflow: 'hidden',
+              backgroundColor: 'white'
             }}>
-              <div style={{ position: 'relative' }}>
+              <div style={{ 
+                position: 'relative',
+                padding: '10px',
+                backgroundColor: 'white',
+                borderRadius: '8px'
+              }}>
                 <Image
                   src={product.image_url || 'https://placehold.co/800x1000?text=Ürün+Görseli'}
                   alt={product.name}
-                  height={600}
+                  height={450}
                   fit="contain"
-                  style={{ width: '100%', objectFit: 'contain' }}
+                  style={{ 
+                    width: '100%', 
+                    objectFit: 'contain', 
+                    maxHeight: '450px',
+                    borderRadius: '4px'
+                  }}
                   onClick={() => setZoomModalOpen(true)}
                 />
                 <Group spacing={0} style={{ 
@@ -221,28 +241,35 @@ export function ProductDetail() {
                   width: '100%', 
                   transform: 'translateY(-50%)', 
                   justifyContent: 'space-between', 
-                  padding: '0 10px' 
+                  padding: '0 15px',
+                  zIndex: 2
                 }}>
                   <ActionIcon 
                     variant="filled" 
-                    color="gray" 
-                    size="xl"
+                    color="dark" 
+                    size="lg"
+                    radius="xl"
+                    opacity={0.7}
                   >
-                    <IconChevronLeft size={24} />
+                    <IconChevronLeft size={20} />
                   </ActionIcon>
                   <ActionIcon 
                     variant="filled" 
-                    color="gray" 
-                    size="xl"
+                    color="dark" 
+                    size="lg"
+                    radius="xl"
+                    opacity={0.7}
                   >
-                    <IconChevronRight size={24} />
+                    <IconChevronRight size={20} />
                   </ActionIcon>
                 </Group>
                 <ActionIcon
                   variant="filled"
-                  color="gray"
-                  size="lg"
-                  style={{ position: 'absolute', top: 10, right: 10 }}
+                  color="dark"
+                  size="md"
+                  radius="xl"
+                  style={{ position: 'absolute', top: 15, right: 15, zIndex: 2 }}
+                  opacity={0.7}
                   onClick={() => setZoomModalOpen(true)}
                 >
                   <IconZoomIn size={20} />
@@ -254,7 +281,7 @@ export function ProductDetail() {
 
         {/* Sağ Taraf - Ürün Bilgileri */}
         <Grid.Col span={{ base: 12, md: 5 }} p={0}>
-          <Stack spacing="xl" p="xl" style={{ backgroundColor: 'white' }}>
+          <Stack spacing="xl" p="xl" style={{ backgroundColor: 'white', marginTop: '30px' }}>
             <div>
               <Text size="xl" fw={700}>{product.name}</Text>
               <Text size="lg" c="dimmed" mt="xs">{product.brand}</Text>
@@ -402,13 +429,20 @@ export function ProductDetail() {
                 Sepete Git
               </Button>
             </Group>
+          </Stack>
+        </Grid.Col>
+      </Grid>
 
-            {/* Değerlendirmeler ve Yorumlar */}
-            <Paper p="lg" radius="md" withBorder>
-              <Stack spacing="md">
+      {/* Değerlendirmeler ve Ürün Özellikleri */}
+      <Container size="xl" my="xl" style={{ backgroundColor: 'white' }}>
+        <Grid>
+          {/* Değerlendirmeler */}
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Paper p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Stack spacing="md" style={{ flex: 1 }}>
                 <Group position="apart">
                   <div>
-                    <Text fw={500}>Değerlendirmeler</Text>
+                    <Text fw={500} size="lg">Değerlendirmeler</Text>
                     <Group spacing="xs" mt="xs">
                       <Rating value={4.5} fractions={2} readOnly />
                       <Text size="sm" c="dimmed">(12 değerlendirme)</Text>
@@ -426,8 +460,8 @@ export function ProductDetail() {
 
                 <Divider />
 
-                <Stack spacing="lg">
-                  {reviews.map((review) => (
+                <Stack spacing="lg" style={{ minHeight: '150px' }}>
+                  {(showAllReviews ? reviews : reviews.slice(0, initialReviewsToShow)).map((review) => (
                     <div key={review.id}>
                       <Group position="apart">
                         <Group>
@@ -443,31 +477,63 @@ export function ProductDetail() {
                     </div>
                   ))}
                 </Stack>
+
+                {reviews.length > initialReviewsToShow && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowAllReviews(!showAllReviews)}
+                    size="sm"
+                    mt="md"
+                    fullWidth
+                    color="blue"
+                  >
+                    {showAllReviews ? 'Daha az göster' : 'Tüm değerlendirmeleri göster'}
+                  </Button>
+                )}
               </Stack>
             </Paper>
+          </Grid.Col>
 
-            {/* Ürün Özellikleri */}
-            <Paper p="lg" radius="md" withBorder>
-              <Stack spacing="md">
-                <Text fw={500}>Ürün Özellikleri</Text>
+          {/* Ürün Özellikleri */}
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Paper p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Stack spacing="md" style={{ flex: 1 }}>
+                <Text fw={500} size="lg">Ürün Özellikleri</Text>
+                
+                <Divider />
+                
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: '1fr 2fr',
-                  gap: '8px',
-                  fontSize: '14px'
+                  gap: '12px',
+                  fontSize: '14px',
+                  minHeight: '150px'
                 }}>
-                  {Object.entries(productFeatures).map(([key, value]) => (
+                  {(showAllFeatures ? Object.entries(productFeatures) : Object.entries(productFeatures).slice(0, initialFeaturesToShow)).map(([key, value]) => (
                     <React.Fragment key={key}>
                       <Text fw={500} c="dimmed">{key}</Text>
                       <Text>{value}</Text>
                     </React.Fragment>
                   ))}
                 </div>
+
+                {Object.entries(productFeatures).length > initialFeaturesToShow && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowAllFeatures(!showAllFeatures)}
+                    size="sm"
+                    mt="md"
+                    fullWidth
+                    color="blue"
+                  >
+                    {showAllFeatures ? 'Daha az göster' : 'Tüm özellikleri göster'}
+                  </Button>
+                )}
               </Stack>
             </Paper>
-          </Stack>
-        </Grid.Col>
-      </Grid>
+          </Grid.Col>
+        </Grid>
+      </Container>
 
       {/* Önerilen Ürünler */}
       {suggestedProducts.length > 0 && (
@@ -475,7 +541,7 @@ export function ProductDetail() {
           backgroundColor: 'white',
           padding: '20px 0',
           marginTop: '20px',
-          borderTop: '1px solid #eee'
+          borderTop: '1px solid #f0f0f0'
         }}>
           <Container size="xl" p={0}>
             <Text size="xl" fw={600} mb="xl" pl="md">
@@ -491,16 +557,40 @@ export function ProductDetail() {
                 <Paper
                   key={suggestedProduct.id}
                   p="xs"
-                  radius="sm"
+                  radius="md"
                   withBorder
-                  style={{ cursor: 'pointer' }}
+                  shadow="sm"
+                  style={{ 
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    overflow: 'hidden'
+                  }}
                   onClick={() => navigate(`/product/${suggestedProduct.id}`)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)';
+                    e.currentTarget.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '';
+                  }}
                 >
-                  <Image
-                    src={suggestedProduct.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
-                    height={200}
-                    fit="contain"
-                  />
+                  <div style={{
+                    padding: '5px',
+                    backgroundColor: 'white',
+                    borderRadius: '4px',
+                    marginBottom: '8px'
+                  }}>
+                    <Image
+                      src={suggestedProduct.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
+                      height={180}
+                      fit="contain"
+                      style={{
+                        objectFit: 'contain',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
                   <Stack spacing={5} mt="sm">
                     <Text size="sm" fw={500} lineClamp={2}>
                       {suggestedProduct.name}
@@ -553,14 +643,62 @@ export function ProductDetail() {
       <Modal
         opened={zoomModalOpen}
         onClose={() => setZoomModalOpen(false)}
-        size="90%"
-        title="Ürün Görseli"
-      >
-        <Image
-          src={product.image_url || 'https://placehold.co/800x1000?text=Ürün+Görseli'}
-          fit="contain"
-          height={800}
-        />
+        size="85%"
+        title=""
+        centered
+        withCloseButton={false}
+        padding={0}
+        radius="md"
+        styles={{
+          body: { backgroundColor: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+          content: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
+          root: { margin: '90px 30px 5px 30px' }
+        }}>
+        <div style={{ 
+          backgroundColor: 'white',
+          padding: '0',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          overflow: 'hidden',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative'
+        }}>
+          <ActionIcon
+            variant="filled"
+            color="dark"
+            radius="xl"
+            style={{ 
+              position: 'absolute', 
+              top: 15, 
+              right: 15, 
+              zIndex: 100,
+              opacity: 0.7
+            }}
+            onClick={() => setZoomModalOpen(false)}
+            size="lg"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M18 6l-12 12" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </ActionIcon>
+          <Image
+            src={product.image_url || 'https://placehold.co/800x1000?text=Ürün+Görseli'}
+            fit="contain"
+            height={800}
+            width="auto"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '80vh',
+              objectFit: 'contain',
+              margin: '0 auto'
+            }}
+          />
+        </div>
       </Modal>
 
       <Modal
