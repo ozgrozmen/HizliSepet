@@ -1,13 +1,16 @@
-import { Group, TextInput, Container, ActionIcon, Menu, Button, Loader, Badge } from '@mantine/core';
-import { IconUser, IconSearch, IconHeart, IconDashboard, IconLogin, IconShoppingCart } from '@tabler/icons-react';
+import { Group, TextInput, Container, ActionIcon, Menu, Button, Loader, Badge, Drawer } from '@mantine/core';
+import { IconUser, IconSearch, IconHeart, IconDashboard, IconLogin, IconShoppingCart, IconMenu2 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useState } from 'react';
+import { Categories } from './Categories';
 
 export function Navbar() {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const { getCartItemCount } = useCart();
+  const [sidebarOpened, setSidebarOpened] = useState(false);
   
   const cartItemCount = getCartItemCount();
 
@@ -41,19 +44,38 @@ export function Navbar() {
       zIndex: 1000
     }}>
       <Container fluid style={{ maxWidth: '100%', height: '100%', padding: 0 }}>
-        <Group style={{ height: '100%', padding: '0 20px' }} position="apart">
-          {/* Logo */}
-          <h1 
-            style={{ 
-              fontSize: '24px', 
-              fontWeight: 900, 
-              cursor: 'pointer',
-              margin: 0
-            }} 
-            onClick={() => navigate('/')}
-          >
-            HızlıSepet
-          </h1>
+        <Group style={{ height: '100%', padding: '0 20px' }} justify="space-between">
+          <Group gap="md">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              radius="md"
+              onClick={() => setSidebarOpened(true)}
+              onMouseEnter={() => setSidebarOpened(true)}
+              sx={(theme) => ({
+                backgroundColor: theme.colors.gray[0],
+                border: `1px solid ${theme.colors.gray[3]}`,
+                '&:hover': {
+                  backgroundColor: theme.colors.gray[1],
+                }
+              })}
+            >
+              <IconMenu2 size={22} />
+            </ActionIcon>
+            
+            {/* Logo */}
+            <h1 
+              style={{ 
+                fontSize: '24px', 
+                fontWeight: 900, 
+                cursor: 'pointer',
+                margin: 0
+              }} 
+              onClick={() => navigate('/')}
+            >
+              HızlıSepet
+            </h1>
+          </Group>
 
           {/* Arama */}
           <TextInput
@@ -63,7 +85,7 @@ export function Navbar() {
           />
 
           {/* Sağ Menü */}
-          <Group>
+          <Group gap="md">
             <ActionIcon 
               variant="subtle" 
               size="lg" 
@@ -148,6 +170,35 @@ export function Navbar() {
           </Group>
         </Group>
       </Container>
+
+      <Drawer
+        opened={sidebarOpened}
+        onClose={() => setSidebarOpened(false)}
+        title="Kategoriler"
+        size="xs"
+        padding="xs"
+        overlayProps={{ opacity: 0.5, blur: 1 }}
+        position="left"
+        onMouseLeave={() => setSidebarOpened(false)}
+        styles={{
+          title: { 
+            fontSize: '1.2rem', 
+            fontWeight: 700,
+            paddingLeft: 10, 
+            marginBottom: 10
+          },
+          body: { padding: 10 },
+          header: { 
+            backgroundColor: '#f8f9fa',
+            borderBottom: '1px solid #e9ecef',
+            marginBottom: 5
+          }
+        }}
+      >
+        <div style={{ padding: '0 5px' }}>
+          <Categories />
+        </div>
+      </Drawer>
     </header>
   );
 } 

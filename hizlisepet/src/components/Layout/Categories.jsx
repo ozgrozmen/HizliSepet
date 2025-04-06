@@ -1,6 +1,7 @@
-import { Container, Group, Button, Paper, Stack } from '@mantine/core';
-import { IconChevronDown } from '@tabler/icons-react';
+import { Button, Stack, Collapse, Text, Divider } from '@mantine/core';
+import { IconChevronDown, IconChevronRight, IconCategory } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 const categories = [
   { 
@@ -119,6 +120,7 @@ const categories = [
 
 export function Categories() {
   const navigate = useNavigate();
+  const [expandedCategory, setExpandedCategory] = useState(null);
 
   const handleCategoryClick = (categoryName) => {
     navigate(`/category/${categoryName.toLowerCase().replace(/ & /g, '-')}`);
@@ -128,104 +130,92 @@ export function Categories() {
     navigate(`/category/${categoryName.toLowerCase().replace(/ & /g, '-')}/${subcategoryName.toLowerCase().replace(/ & /g, '-')}`);
   };
 
+  const toggleCategory = (categoryName, e) => {
+    e.stopPropagation();
+    setExpandedCategory(expandedCategory === categoryName ? null : categoryName);
+  };
+
   return (
-    <div style={{ 
-      width: '100%', 
-      backgroundColor: 'white',
-      borderBottom: '1px solid #e9ecef',
-      height: '40px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      <Container size="xl">
-        <Group wrap="nowrap" justify="center" gap="md">
-          {categories.map((category) => (
-            <div
-              key={category.name}
-              style={{ position: 'relative' }}
-              onMouseEnter={(e) => {
-                if (category.subcategories) {
-                  e.currentTarget.querySelector('.subcategories').style.display = 'block';
+    <Stack spacing={0}>
+      {categories.map((category, index) => (
+        <div key={category.name}>
+          {index > 0 && <Divider my={5} />}
+          
+          <Button
+            variant={expandedCategory === category.name ? "light" : "subtle"}
+            fullWidth
+            onClick={() => handleCategoryClick(category.name)}
+            rightSection={
+              category.subcategories && (
+                <div onClick={(e) => toggleCategory(category.name, e)}>
+                  {expandedCategory === category.name ? (
+                    <IconChevronDown size={16} stroke={2} />
+                  ) : (
+                    <IconChevronRight size={16} stroke={2} />
+                  )}
+                </div>
+              )
+            }
+            leftSection={<IconCategory size={16} />}
+            styles={(theme) => ({
+              root: {
+                color: '#333',
+                padding: '10px 15px',
+                height: 'auto',
+                justifyContent: 'space-between',
+                fontWeight: 600,
+                borderRadius: theme.radius.md,
+                backgroundColor: expandedCategory === category.name ? theme.colors.blue[0] : 'transparent',
+                '&:hover': {
+                  backgroundColor: expandedCategory === category.name ? theme.colors.blue[0] : theme.colors.gray[0]
                 }
-              }}
-              onMouseLeave={(e) => {
-                if (category.subcategories) {
-                  e.currentTarget.querySelector('.subcategories').style.display = 'none';
-                }
-              }}
-            >
-              <Button
-                variant="default"
-                size="sm"
-                rightSection={category.subcategories && <IconChevronDown size={14} />}
-                onClick={() => handleCategoryClick(category.name)}
-                styles={{
-                  root: {
-                    color: '#333',
-                    padding: '0 15px',
-                    height: '32px',
-                    whiteSpace: 'nowrap',
-                    borderColor: '#dee2e6',
-                    backgroundColor: 'white',
-                    '&:hover': {
-                      backgroundColor: '#f8f9fa',
-                      borderColor: '#dee2e6'
-                    }
-                  }
-                }}
-              >
-                {category.name}
-              </Button>
-              {category.subcategories && (
-                <Paper
-                  className="subcategories"
-                  shadow="sm"
-                  style={{
-                    display: 'none',
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    width: '200px',
-                    backgroundColor: 'white',
-                    border: '1px solid #dee2e6',
-                    borderTop: 'none',
-                    zIndex: 1000,
-                    marginTop: '1px'
-                  }}
-                >
-                  <Stack gap={0}>
-                    {category.subcategories.map((subcat) => (
-                      <Button
-                        key={subcat}
-                        variant="subtle"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSubcategoryClick(category.name, subcat);
-                        }}
-                        styles={{
-                          root: {
-                            color: '#333',
-                            padding: '8px 15px',
-                            height: 'auto',
-                            justifyContent: 'flex-start',
-                            '&:hover': {
-                              backgroundColor: '#f8f9fa'
-                            }
-                          }
-                        }}
-                      >
-                        {subcat}
-                      </Button>
-                    ))}
-                  </Stack>
-                </Paper>
-              )}
-            </div>
-          ))}
-        </Group>
-      </Container>
-    </div>
+              },
+              inner: {
+                justifyContent: 'flex-start'
+              },
+              label: {
+                fontSize: '0.9rem'
+              }
+            })}
+          >
+            {category.name}
+          </Button>
+          
+          {category.subcategories && (
+            <Collapse in={expandedCategory === category.name}>
+              <Stack spacing={0} pl={10} py={5} style={{ backgroundColor: '#f9f9f9', borderRadius: '0 0 4px 4px' }}>
+                {category.subcategories.map((subcat) => (
+                  <Button
+                    key={subcat}
+                    variant="subtle"
+                    size="compact-sm"
+                    onClick={() => handleSubcategoryClick(category.name, subcat)}
+                    styles={(theme) => ({
+                      root: {
+                        color: '#555',
+                        padding: '6px 10px',
+                        height: 'auto',
+                        justifyContent: 'flex-start',
+                        borderRadius: 0,
+                        '&:hover': {
+                          backgroundColor: theme.colors.gray[1],
+                          color: theme.colors.blue[7]
+                        }
+                      },
+                      label: {
+                        fontSize: '0.85rem',
+                        fontWeight: 'normal'
+                      }
+                    })}
+                  >
+                    {subcat}
+                  </Button>
+                ))}
+              </Stack>
+            </Collapse>
+          )}
+        </div>
+      ))}
+    </Stack>
   );
 } 

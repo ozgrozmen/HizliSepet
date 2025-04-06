@@ -1,13 +1,11 @@
 import { Container } from '@mantine/core';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
-import { Categories } from './Categories';
 
 export function Layout({ children }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%' }}>
       <Navbar />
-      <Categories />
       <main style={{ 
         flex: 1, 
         backgroundColor: '#f8f9fa', 

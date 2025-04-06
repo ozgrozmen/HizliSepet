@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+cdcdbimport { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Container, Grid, Loader, Center, Text } from '@mantine/core';
 import { supabase } from '../../lib/supabase';
