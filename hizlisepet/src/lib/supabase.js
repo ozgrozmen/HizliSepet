@@ -1,17 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 console.log('Supabase yapılandırması:', { 
   url: supabaseUrl, 
-  keyLength: supabaseKey ? supabaseKey.length : 'undefined' 
+  keyLength: supabaseAnonKey ? supabaseAnonKey.length : 'undefined' 
 });
 
 // Realtime özelliğini devre dışı bırakarak istemciyi oluştur
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    enabled: false
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  db: {
+    schema: 'public'
   }
 })
 
@@ -432,24 +437,24 @@ export async function debugSupabaseAPI(endpoint, requestOptions = {}) {
     // Supabase URL ve API Key kontrolü
     console.log('Supabase Yapılandırması:', {
       url: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'tanımlanmamış',
-      key: supabaseKey ? `${supabaseKey.substring(0, 5)}...${supabaseKey.substring(supabaseKey.length - 5)}` : 'tanımlanmamış'
+      key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 5)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 5)}` : 'tanımlanmamış'
     });
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return { 
         success: false, 
         error: 'Supabase URL veya API anahtarı tanımlanmamış',
         env: {
           url: !!supabaseUrl,
-          key: !!supabaseKey
+          key: !!supabaseAnonKey
         }
       };
     }
     
     // API isteği yapılandırması
     const headers = {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
       'Content-Type': 'application/json',
       ...requestOptions.headers
     };
@@ -639,7 +644,7 @@ export async function analyze400Error(endpoint, requestOptions = {}) {
     const corsCheck = await fetch(headersCheckUrl, {
       method: 'OPTIONS',
       headers: {
-        'apikey': supabaseKey,
+        'apikey': supabaseAnonKey,
         'Access-Control-Request-Method': 'POST',
         'Access-Control-Request-Headers': 'Content-Type, Authorization'
       }
@@ -726,5 +731,37 @@ export async function analyze400Error(endpoint, requestOptions = {}) {
       message: 'Hata analizi sırasında beklenmeyen bir sorun oluştu.',
       error: err
     };
+  }
+}
+
+// RLS politikalarını kontrol etmek için yardımcı fonksiyon
+export async function checkRLSPolicies() {
+  try {
+    // Products tablosu için okuma izni kontrolü
+    const { data: readData, error: readError } = await supabase
+      .from('products')
+      .select('*')
+      .limit(1);
+
+    if (readError) {
+      console.error('RLS Okuma Hatası:', readError);
+      return false;
+    }
+
+    // Products tablosu için yazma izni kontrolü
+    const { error: writeError } = await supabase
+      .from('products')
+      .insert([{ name: 'test', price: 0 }])
+      .select();
+
+    if (writeError) {
+      console.error('RLS Yazma Hatası:', writeError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('RLS Kontrol Hatası:', error);
+    return false;
   }
 } 

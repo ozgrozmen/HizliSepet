@@ -34,9 +34,19 @@ const Home = () => {
         throw error;
       }
       
-      setFeaturedProducts(data || []);
+      // Verileri kontrol et ve boş değerleri varsayılan değerlerle değiştir
+      const processedData = (data || []).map(product => ({
+        ...product,
+        name: product.name || 'İsimsiz Ürün',
+        price: product.price || 0,
+        image_url: product.image_url || 'https://via.placeholder.com/300x200',
+        description: product.description || 'Açıklama bulunmuyor'
+      }));
+      
+      setFeaturedProducts(processedData);
     } catch (error) {
       console.error('Ürünler yüklenirken hata:', error);
+      setFeaturedProducts([]); // Hata durumunda boş dizi ata
     } finally {
       setLoading(false);
     }
@@ -218,7 +228,13 @@ const Home = () => {
           <Title order={2} mb={20}>Öne Çıkan Ürünler</Title>
           
           {loading ? (
-            <Text>Ürünler yükleniyor...</Text>
+            <Center>
+              <Text>Ürünler yükleniyor...</Text>
+            </Center>
+          ) : featuredProducts.length === 0 ? (
+            <Center>
+              <Text>Henüz ürün bulunmuyor.</Text>
+            </Center>
           ) : (
             <Carousel
               slideSize={{ base: '100%', sm: '50%', md: '33.333%', lg: '25%' }}
@@ -234,10 +250,11 @@ const Home = () => {
                     <Card.Section>
                       <Link to={`/products/${product.id}`} style={{ textDecoration: 'none' }}>
                         <Image
-                          src={product.image_url || 'https://via.placeholder.com/300x200'}
+                          src={product.image_url}
                           height={200}
                           alt={product.name}
                           style={{ objectFit: 'cover' }}
+                          withPlaceholder
                         />
                       </Link>
                     </Card.Section>
@@ -245,28 +262,30 @@ const Home = () => {
                     <Box p="xs" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <Group position="apart" mt="md" mb="xs">
                         <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          <Text weight={500} lineClamp={1}>{product.name}</Text>
+                          <Text weight={500} lineClamp={2} style={{ minHeight: '3em' }}>
+                            {product.name}
+                          </Text>
                         </Link>
                         <Badge color="blue" variant="light">
-                          {product.category}
+                          {formatPrice(product.price)}
                         </Badge>
                       </Group>
 
-                      <Group position="apart" style={{ marginTop: 'auto' }}>
-                        <Text weight={600} size="lg" color="blue">
-                          {formatPrice(product.price)}
-                        </Text>
-                        <Button 
-                          size="xs" 
-                          radius="md" 
-                          leftIcon={<IconShoppingCart size={16} />}
-                          onClick={() => {
-                            addToCart(product);
-                          }}
-                        >
-                          Sepete Ekle
-                        </Button>
-                      </Group>
+                      <Text size="sm" color="dimmed" lineClamp={2} style={{ flex: 1 }}>
+                        {product.description}
+                      </Text>
+
+                      <Button
+                        variant="light"
+                        color="blue"
+                        fullWidth
+                        mt="md"
+                        radius="md"
+                        leftSection={<IconShoppingCart size={16} />}
+                        onClick={() => addToCart(product)}
+                      >
+                        Sepete Ekle
+                      </Button>
                     </Box>
                   </Card>
                 </Carousel.Slide>
