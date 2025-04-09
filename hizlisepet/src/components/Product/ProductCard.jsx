@@ -1,4 +1,4 @@
-import { Card, Image, Text, Button, Group, ActionIcon } from '@mantine/core';
+import { Card, Image, Text, Button, Group, ActionIcon, Badge } from '@mantine/core';
 import { IconHeart, IconHeartFilled, IconShoppingCart } from '@tabler/icons-react';
 import { useFavorite } from '../../context/FavoriteContext';
 import { useAuth } from '../../context/AuthContext';
@@ -78,22 +78,20 @@ export function ProductCard({ product }) {
       radius="md" 
       withBorder
       style={{ 
-        height: '100%',
+        height: 'auto',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         cursor: 'pointer',
-        minHeight: '320px',
-        maxHeight: '350px'
+        minHeight: '400px',
+        maxHeight: '450px'
       }}
       onClick={() => navigate(`/product/${product.id}`)}
     >
-      <Card.Section style={{ flex: 1 }}>
+      <Card.Section style={{ flex: 0 }}>
         <div style={{ 
           width: '100%', 
-          height: '100%',
-          minHeight: '180px',
-          maxHeight: '200px',
+          height: '200px',
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: '#f8f9fa'
@@ -113,45 +111,53 @@ export function ProductCard({ product }) {
         </div>
       </Card.Section>
 
-      <Text fw={500} size="md" mt="xs" lineClamp={2}>
-        {product?.name || 'Ürün Adı'}
-      </Text>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '12px 8px', justifyContent: 'space-between' }}>
+        <div>
+          <Text fw={500} size="md" mt="xs" lineClamp={2} style={{ minHeight: '3em' }}>
+            {product?.name || 'Ürün Adı'}
+          </Text>
 
-      <Text size="sm" c="dimmed">
-        {product?.brand || 'Marka'}
-      </Text>
+          <Badge color="blue" variant="light" style={{ marginBottom: '8px', display: 'inline-block' }}>
+            {product?.category || 'Kategori'}
+          </Badge>
 
-      <Group justify="space-between" mt="xs" pt="xs">
-        <Text size="lg" fw={700} style={{ color: '#228be6' }}>
-          {(product?.price || 0).toFixed(2)} TL
-        </Text>
-        <Group gap="xs">
-          <ActionIcon 
-            variant="light"
-            color="red"
-            size="md"
-            onClick={handleFavoriteClick}
-          >
-            {isFavorite(product.id) ? (
-              <IconHeartFilled size={18} />
-            ) : (
-              <IconHeart size={18} />
-            )}
-          </ActionIcon>
-          <Button 
-            variant="light" 
-            color="blue"
-            size="sm"
-            style={{ flex: '0 0 auto' }}
-            onClick={handleAddToCart}
-            leftSection={<IconShoppingCart size={16} />}
-            loading={loading}
-            disabled={loading}
-          >
-            Sepete Ekle
-          </Button>
+          <Text size="sm" c="dimmed" mb="md">
+            {product?.brand || 'Marka'}
+          </Text>
+        </div>
+
+        <Group justify="space-between" mt="auto" style={{ borderTop: '1px solid #eee', paddingTop: '10px', flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+          <Text size="lg" fw={700} style={{ color: '#228be6' }}>
+            {(product?.price || 0).toFixed(2)} TL
+          </Text>
+          <Group gap="xs" justify="center">
+            <ActionIcon 
+              variant="light"
+              color="red"
+              size="md"
+              onClick={handleFavoriteClick}
+            >
+              {isFavorite(product.id) ? (
+                <IconHeartFilled size={18} />
+              ) : (
+                <IconHeart size={18} />
+              )}
+            </ActionIcon>
+            <Button 
+              variant="light" 
+              color="blue"
+              size="sm"
+              style={{ flex: '1 1 auto' }}
+              onClick={handleAddToCart}
+              leftSection={<IconShoppingCart size={16} />}
+              loading={loading}
+              disabled={loading}
+            >
+              Sepete Ekle
+            </Button>
+          </Group>
         </Group>
-      </Group>
+      </div>
     </Card>
   );
 } 

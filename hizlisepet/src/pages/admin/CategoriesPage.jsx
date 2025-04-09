@@ -30,7 +30,8 @@ const predefinedCategories = [
   { name: 'Kozmetik', description: 'Güzellik ve bakım ürünleri' },
   { name: 'Elektronik', description: 'Elektronik cihazlar ve aksesuarlar' },
   { name: 'Kitap', description: 'Kitaplar ve kırtasiye ürünleri' },
-  { name: 'Spor', description: 'Spor ekipmanları ve giyim' }
+  { name: 'Spor', description: 'Spor ekipmanları ve giyim' },
+  { name: 'Ayakkabı ve Çanta', description: 'Ayakkabı ve çanta ürünleri' }
 ];
 
 export function CategoriesPage() {
@@ -120,7 +121,7 @@ export function CategoriesPage() {
       // Tüm kategorileri getir
       const { data: allCategories, error: mainError } = await supabase
         .from('categories')
-        .select('id, name, description, created_at')
+        .select('id, name, description')
         .order('name', { ascending: true });
 
       if (mainError) {
@@ -137,7 +138,6 @@ export function CategoriesPage() {
       const categoriesWithCounts = await Promise.all(
         allCategories.map(async (category) => {
           try {
-            // Ürün sayısını hesapla
             const { data: products, error: productError } = await supabase
               .from('products')
               .select('id')

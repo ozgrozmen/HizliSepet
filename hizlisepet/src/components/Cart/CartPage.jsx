@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Title,
@@ -21,7 +21,6 @@ import {
   Card,
   Center
 } from '@mantine/core';
-import { useForm } from '@mantine/form';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -42,6 +41,20 @@ export function CartPage() {
   const [clearModalOpen, setClearModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState(null);
   const navigate = useNavigate();
+
+  // Sepet öğeleri için form bilgilerini oluştur
+  const [formValues, setFormValues] = useState({});
+  
+  // Form değerlerini güncelle
+  useEffect(() => {
+    const newFormValues = {};
+    cartItems.forEach(item => {
+      newFormValues[item.id] = {
+        quantity: item.quantity
+      };
+    });
+    setFormValues(newFormValues);
+  }, [cartItems]);
 
   const handleQuantityChange = async (itemId, newQuantity) => {
     if (isNaN(newQuantity)) {
@@ -81,18 +94,9 @@ export function CartPage() {
     }
   };
 
-  const quantityForms = cartItems.reduce((forms, item) => {
-    forms[item.id] = useForm({
-      initialValues: {
-        quantity: item.quantity
-      },
-      validate: {
-        quantity: (value) => 
-          (value < 1 || value > 99) ? 'Miktar 1-99 arası olmalıdır' : null
-      }
-    });
-    return forms;
-  }, {});
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(price);
+  };
 
   const openRemoveModal = (item) => {
     setItemToRemove(item);
@@ -153,7 +157,7 @@ export function CartPage() {
   if (loading) {
     return (
       <Container size="xl" py="xl">
-        <LoadingOverlay visible={true} overlayBlur={2} />
+        <LoadingOverlay visible={true} />
       </Container>
     );
   }
@@ -190,9 +194,9 @@ export function CartPage() {
 
   return (
     <Container size="xl" py="xl" pos="relative">
-      <LoadingOverlay visible={updating} overlayBlur={2} />
+      <LoadingOverlay visible={updating} />
       
-      <Group position="apart" mb="lg">
+      <Group justify="space-between" mb="lg">
         <Title order={1}>Sepetim</Title>
         {cartItems.length > 0 && (
           <Button 
@@ -212,15 +216,21 @@ export function CartPage() {
           <Paper p="md" withBorder>
             {cartItems.map((item) => {
               const product = item.product || item;
-              const form = quantityForms[item.id];
               
-              if (form && form.values.quantity !== item.quantity) {
-                form.setValues({ quantity: item.quantity });
+              // Miktar değeri doğrulanmış olmalı
+              if (formValues[item.id]?.quantity !== item.quantity) {
+                setFormValues(prev => ({
+                  ...prev,
+                  [item.id]: {
+                    ...prev[item.id],
+                    quantity: item.quantity
+                  }
+                }));
               }
               
               return (
                 <Box key={item.id} mb="md">
-                  <Group position="apart" noWrap align="flex-start">
+                  <Group justify="space-between" align="flex-start" wrap="nowrap">
                     {/* Ürün Resmi */}
                     <Image
                       src={product.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
@@ -252,12 +262,18 @@ export function CartPage() {
                           </Badge>
                         )}
                       </Group>
-                      <Group mt="xs">
-                        <Text fw={700} c="blue">
-                          {((item.price || product.price) * item.quantity).toFixed(2)} TL
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                          Birim: {(item.price || product.price).toFixed(2)} TL
+                      <Group justify="space-between" mb="xs">
+                        <Text fw={500}>Fiyat:</Text>
+                        <Text>{formatPrice(product.price)}</Text>
+                      </Group>
+                      <Group justify="space-between" mb="xs">
+                        <Text fw={500}>Miktar:</Text>
+                        <Text>{item.quantity} adet</Text>
+                      </Group>
+                      <Group justify="space-between" mb="xs">
+                        <Text fw={500}>Toplam:</Text>
+                        <Text fw={600} c="blue">
+                          {formatPrice(product.price * item.quantity)}
                         </Text>
                       </Group>
                     </Box>
@@ -270,17 +286,22 @@ export function CartPage() {
                           variant="light"
                           disabled={item.quantity <= 1 || updating}
                           onClick={() => {
-                            const newQuantity = item.quantity - 1;
-                            if (newQuantity >= 1) {
-                              handleQuantityChange(item.id, newQuantity);
-                              if (form) form.setFieldValue('quantity', newQuantity);
-                            }
+                            const newQuantity = Math.max(1, formValues[item.id]?.quantity - 1 || item.quantity - 1);
+                            // Form değerini güncelle
+                            setFormValues(prev => ({
+                              ...prev,
+                              [item.id]: {
+                                ...prev[item.id],
+                                quantity: newQuantity
+                              }
+                            }));
+                            // Sepet miktarını güncelle
+                            handleQuantityChange(item.id, newQuantity);
                           }}
                         >
                           -
                         </ActionIcon>
                         <NumberInput
-                          {...form.getInputProps('quantity')}
                           min={1}
                           max={99}
                           size="xs"
@@ -289,28 +310,51 @@ export function CartPage() {
                           disabled={updating}
                           styles={{ input: { textAlign: 'center' } }}
                           onChange={(val) => {
-                            form.setFieldValue('quantity', val);
+                            // Form değerlerini güncelle
+                            setFormValues(prev => ({
+                              ...prev,
+                              [item.id]: {
+                                ...prev[item.id],
+                                quantity: val
+                              }
+                            }));
                           }}
                           onBlur={() => {
-                            if (!form.validate().hasErrors) {
-                              if (form.values.quantity !== item.quantity) {
-                                handleQuantityChange(item.id, form.values.quantity);
+                            const newQuantity = formValues[item.id]?.quantity;
+                            // Miktarı doğrula ve güncelle
+                            if (newQuantity !== undefined && newQuantity !== item.quantity) {
+                              if (newQuantity >= 1 && newQuantity <= 99) {
+                                handleQuantityChange(item.id, newQuantity);
+                              } else {
+                                // Miktar geçersizse, önceki miktarı geri yükle
+                                setFormValues(prev => ({
+                                  ...prev,
+                                  [item.id]: {
+                                    ...prev[item.id],
+                                    quantity: item.quantity
+                                  }
+                                }));
                               }
-                            } else {
-                              form.setFieldValue('quantity', item.quantity);
                             }
                           }}
+                          value={formValues[item.id]?.quantity || item.quantity}
                         />
                         <ActionIcon
                           size="sm"
                           variant="light"
                           disabled={item.quantity >= 99 || updating}
                           onClick={() => {
-                            const newQuantity = item.quantity + 1;
-                            if (newQuantity <= 99) {
-                              handleQuantityChange(item.id, newQuantity);
-                              if (form) form.setFieldValue('quantity', newQuantity);
-                            }
+                            const newQuantity = Math.min(99, formValues[item.id]?.quantity + 1 || item.quantity + 1);
+                            // Form değerini güncelle
+                            setFormValues(prev => ({
+                              ...prev,
+                              [item.id]: {
+                                ...prev[item.id],
+                                quantity: newQuantity
+                              }
+                            }));
+                            // Sepet miktarını güncelle
+                            handleQuantityChange(item.id, newQuantity);
                           }}
                         >
                           +
@@ -338,26 +382,26 @@ export function CartPage() {
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Sipariş Özeti</Title>
             
-            <Group position="apart" mb="xs">
+            <Group justify="space-between" mb="xs">
               <Text>Ürünler Toplamı:</Text>
-              <Text>{cartTotal.toFixed(2)} TL</Text>
+              <Text>{formatPrice(cartTotal)}</Text>
             </Group>
             
-            <Group position="apart" mb="xs">
+            <Group justify="space-between" mb="xs">
               <Text>İndirim:</Text>
-              <Text c="green">-{(cartTotal - discountedTotal).toFixed(2)} TL</Text>
+              <Text c="green">-{formatPrice(cartTotal - discountedTotal)}</Text>
             </Group>
             
-            <Group position="apart" mb="xs">
+            <Group justify="space-between" mb="xs">
               <Text>Kargo:</Text>
               <Text>Ücretsiz</Text>
             </Group>
             
             <Divider my="md" />
             
-            <Group position="apart" mb="md">
+            <Group justify="space-between" mb="md">
               <Text fw={700} size="lg">Toplam:</Text>
-              <Text fw={700} size="lg" c="blue">{discountedTotal.toFixed(2)} TL</Text>
+              <Text fw={700} size="lg" c="blue">{formatPrice(discountedTotal)}</Text>
             </Group>
             
             <Button 
@@ -393,7 +437,7 @@ export function CartPage() {
         <Text mb="lg">
           {itemToRemove?.product?.name || 'Bu ürünü'} sepetinizden çıkarmak istediğinize emin misiniz?
         </Text>
-        <Group position="right">
+        <Group justify="flex-end">
           <Button 
             variant="outline" 
             onClick={() => setRemoveModalOpen(false)}
@@ -420,7 +464,7 @@ export function CartPage() {
         <Text mb="lg">
           Sepetinizdeki tüm ürünleri çıkarmak istediğinize emin misiniz?
         </Text>
-        <Group position="right">
+        <Group justify="flex-end">
           <Button 
             variant="outline" 
             onClick={() => setClearModalOpen(false)}

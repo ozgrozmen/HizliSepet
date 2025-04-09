@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Container, Grid, Loader, Center, Box, Image, Title, Text, Group, Badge, Card, Button, Overlay, RingProgress } from '@mantine/core';
+import { Container, Grid, Loader, Center, Box, Image, Title, Text, Group, Badge, Card, Button, Overlay, RingProgress, ActionIcon } from '@mantine/core';
 import { Carousel } from '@mantine/carousel';
 import { supabase } from '../../lib/supabase';
 import { ProductCard } from '../Product/ProductCard';
 import { Link } from 'react-router-dom';
-import { IconShoppingCart, IconTag, IconShirt, IconDeviceGamepad2, IconApple, IconHome2, IconBabyCarriage, IconShoe, IconBottle } from '@tabler/icons-react';
+import { IconShoppingCart, IconTag, IconShirt, IconDeviceGamepad2, IconApple, IconHome2, IconBabyCarriage, IconShoe, IconBottle, IconHeart } from '@tabler/icons-react';
 import { useCart } from '../../context/CartContext';
 import '@mantine/carousel/styles.css';
+import { notifications } from '@mantine/notifications';
 
 export function HomePage() {
   const [products, setProducts] = useState([]);
@@ -16,15 +17,55 @@ export function HomePage() {
   useEffect(() => {
     async function fetchProducts() {
       try {
+        setLoading(true);
+        console.log('Ürünler yükleniyor...');
+        
         const { data, error } = await supabase
           .from('products')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        setProducts(data || []);
+        if (error) {
+          console.error('Supabase hatası:', error);
+          throw error;
+        }
+
+        // HOTFIX: Supabase'den gelen verilerin doğru formatlanması için
+        if (!data || data.length === 0) {
+          console.warn('Ürün verisi bulunamadı veya boş!');
+          setProducts([]);
+          return;
+        }
+
+        // Veri kontrolü - Eksik alan ve tiplerle ilgili hataları bulma
+        const dataCheck = data.map(item => ({
+          hasId: !!item.id,
+          hasName: !!item.name,
+          hasPrice: typeof item.price === 'number',
+          hasImageUrl: !!item.image_url,
+        }));
+        console.log('Veri doğruluk kontrolü:', dataCheck);
+
+        // Verileri kontrol et ve boş değerleri varsayılan değerlerle değiştir
+        const processedData = data.map(product => ({
+          ...product,
+          id: product.id,
+          name: product.name || 'İsimsiz Ürün',
+          price: typeof product.price === 'number' ? product.price : 0,
+          image_url: product.image_url || 'https://via.placeholder.com/300x200',
+          description: product.description || 'Açıklama bulunmuyor',
+          category: product.category || 'Genel'
+        }));
+        
+        console.log('Yüklenen ürünler:', processedData.length);
+        if (processedData.length > 0) {
+          console.log('Örnek ürün:', processedData[0]);
+        }
+        
+        setProducts(processedData);
       } catch (error) {
         console.error('Ürünler yüklenirken hata:', error);
+        setProducts([]); // Hata durumunda boş dizi
       } finally {
         setLoading(false);
       }
@@ -102,11 +143,14 @@ export function HomePage() {
       <Box style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
         <Container size="xl" style={{ 
           maxWidth: '1200px', 
-          padding: '24px 16px',
-          '@media (max-width: 1024px)': {
+          padding: '24px 16px'
+        }}
+        sx={(theme) => ({
+          [`@media (max-width: ${theme.breakpoints.md})`]: {
             padding: '16px 12px'
           }
-        }}>
+        })}
+        >
           {/* Ana Banner Slider - Görsellerle */}
           <Carousel
             withIndicators
@@ -253,7 +297,7 @@ export function HomePage() {
           <Box mb={30}>
             <Title order={2} mb={20}>Öne Çıkan Ürünler</Title>
             <Carousel
-              slideSize="25%"
+              slideSize={{ base: '100%', xs: '50%', sm: '33.333%', md: '25%' }}
               slideGap="md"
               align="start"
               slidesToScroll={1}
@@ -264,52 +308,122 @@ export function HomePage() {
                 <Carousel.Slide key={product.id}>
                   <Card 
                     shadow="sm" 
-                    p="lg"
+                    p={0}
                     radius="md" 
                     withBorder 
-                    m={5} 
                     style={{ 
-                      height: '100%', 
+                      height: 'auto', 
+                      minHeight: '450px',
                       display: 'flex', 
                       flexDirection: 'column' 
                     }}
+                    sx={(theme) => ({
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: theme.shadows.md,
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                      }
+                    })}
                   >
-                    <Card.Section>
-                      <Link to={`/products/${product.id}`} style={{ textDecoration: 'none' }}>
-                        <Image
-                          src={product.image_url || 'https://via.placeholder.com/300x200'}
-                          height={200}
-                          alt={product.name}
-                          style={{ objectFit: 'cover' }}
-                        />
+                    <Card.Section style={{ margin: 0, padding: 0 }}>
+                      <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                        <div style={{ 
+                          width: '100%', 
+                          height: '200px',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          backgroundColor: '#f8f9fa'
+                        }}>
+                          <img
+                            src={product.image_url || 'https://via.placeholder.com/300x200'}
+                            alt={product.name || 'Ürün resmi'}
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/300x200?text=Görsel+Bulunamadı';
+                            }}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                          />
+                        </div>
                       </Link>
                     </Card.Section>
 
-                    <Box p="xs" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Group position="apart" mt="md" mb="xs">
-                        <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Box p="md" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                           <Text 
-                            weight={500} 
+                            fw={500} 
                             lineClamp={2} 
                             size="md"
-                            style={{ minHeight: '3em' }}
+                            style={{ 
+                              minHeight: '3em',
+                              display: 'block',
+                              width: '100%',
+                              marginBottom: '5px'
+                            }}
                           >
-                            {product.name}
+                            {product.name || 'Ürün Adı'}
                           </Text>
                         </Link>
-                        <Badge color="blue" variant="light">
-                          {product.category}
+                        
+                        <Badge color="blue" variant="light" style={{ marginBottom: '10px' }}>
+                          {product.category || 'Kategori'}
                         </Badge>
-                      </Group>
 
-                      <Text 
-                        size="sm" 
-                        color="dimmed" 
-                        lineClamp={2} 
-                        style={{ flex: 1 }}
-                      >
-                        {product.description}
-                      </Text>
+                        <Text 
+                          size="sm" 
+                          color="dimmed" 
+                          lineClamp={2} 
+                          style={{ marginBottom: '15px' }}
+                        >
+                          {product.description || 'Ürün açıklaması bulunmuyor.'}
+                        </Text>
+                      </div>
+                      <Group justify="space-between" mt="md" style={{ borderTop: '1px solid #eee', paddingTop: '10px', flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+                        <Text fw={700} size="lg" style={{ color: '#228be6' }}>
+                          {formatPrice(product.price || 0)}
+                        </Text>
+                        <Group gap="xs" justify="center">
+                          <ActionIcon 
+                            variant="light"
+                            color="red"
+                            size="md"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              notifications.show({
+                                title: 'Bilgi',
+                                message: 'Favorilere eklemek için giriş yapmalısınız',
+                                color: 'blue'
+                              });
+                            }}
+                          >
+                            <IconHeart size={18} />
+                          </ActionIcon>
+                          <Button 
+                            variant="light" 
+                            color="blue"
+                            size="xs"
+                            style={{ flex: '1 1 auto' }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              addToCart(product, 1);
+                              notifications.show({
+                                title: 'Başarılı',
+                                message: `${product.name} sepete eklendi`,
+                                color: 'green'
+                              });
+                            }}
+                            leftSection={<IconShoppingCart size={16} />}
+                          >
+                            Sepete Ekle
+                          </Button>
+                        </Group>
+                      </Group>
                     </Box>
                   </Card>
                 </Carousel.Slide>

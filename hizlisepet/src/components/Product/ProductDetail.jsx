@@ -351,7 +351,6 @@ export function ProductDetail() {
                     variant="subtle"
                     onClick={() => setShowSizeGuide(true)}
                     size="xs"
-                    compact
                   >
                     <Group spacing="xs">
                       <span>Beden Rehberi</span>

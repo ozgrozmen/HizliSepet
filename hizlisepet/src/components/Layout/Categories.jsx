@@ -188,7 +188,7 @@ export function Categories() {
                   <Button
                     key={subcat}
                     variant="subtle"
-                    size="compact-sm"
+                    size="xs"
                     onClick={() => handleSubcategoryClick(category.name, subcat)}
                     styles={(theme) => ({
                       root: {
