@@ -1,6 +1,6 @@
 import { Box, Button, Stack } from '@mantine/core';
 import { useNavigate, Outlet } from 'react-router-dom';
-import { IconHome, IconPackage, IconCategory, IconUsers, IconArrowLeft } from '@tabler/icons-react';
+import { IconHome, IconPackage, IconCategory, IconUsers, IconArrowLeft, IconShoppingCart } from '@tabler/icons-react';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ export default function AdminLayout() {
     { label: 'Ürünler', path: '/admin/products', icon: IconPackage },
     { label: 'Kategoriler', path: '/admin/categories', icon: IconCategory },
     { label: 'Kullanıcılar', path: '/admin/users', icon: IconUsers },
+    { label: 'Siparişler', path: '/admin/orders', icon: IconShoppingCart },
   ];
 
   return (

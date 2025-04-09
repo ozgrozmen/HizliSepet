@@ -328,7 +328,7 @@ export function CategoriesPage() {
               {category.product_count} Ürün
             </Badge>
 
-            <Group gap="xs" style={{ marginLeft: 'auto' }}>
+            <Group ml="auto" gap="xs">
               <ActionIcon
                 variant="filled"
                 color="blue"

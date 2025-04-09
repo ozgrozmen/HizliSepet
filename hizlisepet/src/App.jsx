@@ -20,6 +20,7 @@ import Products from './components/Admin/Products';
 import Users from './components/Admin/Users';
 import { CategoriesPage } from './pages/admin/CategoriesPage';
 import { NewCategoryPage } from './pages/admin/NewCategoryPage';
+import { OrdersPage } from './pages/OrdersPage';
 
 function App() {
   return (
@@ -69,6 +70,11 @@ function App() {
                   <Route path="/cart" element={
                     <Layout>
                       <CartPage />
+                    </Layout>
+                  } />
+                  <Route path="/orders" element={
+                    <Layout>
+                      <OrdersPage />
                     </Layout>
                   } />
                   <Route path="/login" element={<Login />} />
