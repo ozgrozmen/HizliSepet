@@ -21,6 +21,7 @@ import Users from './components/Admin/Users';
 import { CategoriesPage } from './pages/admin/CategoriesPage';
 import { NewCategoryPage } from './pages/admin/NewCategoryPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { CheckoutPage } from './pages/CheckoutPage';
 
 function App() {
   return (
@@ -75,6 +76,11 @@ function App() {
                   <Route path="/orders" element={
                     <Layout>
                       <OrdersPage />
+                    </Layout>
+                  } />
+                  <Route path="/checkout" element={
+                    <Layout>
+                      <CheckoutPage />
                     </Layout>
                   } />
                   <Route path="/login" element={<Login />} />

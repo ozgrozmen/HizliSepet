@@ -9,15 +9,75 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  // Kullanıcının sepetini veritabanından çek
+  // Sadece bir kez yüklenecek başlangıç işlemi (sayfa yüklendiğinde)
   useEffect(() => {
+    console.log('Sayfa yüklendiğinde sepet kontrolü yapılıyor...');
+    const checkCart = async () => {
+      if (user) {
+        // Kullanıcı girişi yapılmış, veritabanından verileri yükle
+        console.log('Oturum açmış kullanıcı için sepet verileri yükleniyor:', user.id);
+        await fetchCartItems();
+      } else {
+        // Kullanıcı giriş yapmamışsa, yerel depolamadan sepeti yükle
+        console.log('Oturum açılmamış, localStorage\'dan sepet yükleniyor');
+        const localCart = localStorage.getItem('cart');
+        if (localCart) {
+          try {
+            const parsedCart = JSON.parse(localCart);
+            console.log('Yerel sepet bulundu:', parsedCart);
+            
+            // Tüm ürün referanslarının doğru olduğundan emin olalım
+            const validatedCart = parsedCart.map(item => {
+              // Eğer product nesnesi yoksa veya eksikse düzeltelim
+              if (!item.product && item.product_id) {
+                console.warn('Eksik ürün bilgisi, varsayılan bilgiler kullanılıyor:', item.product_id);
+                return {
+                  ...item,
+                  product: {
+                    id: item.product_id,
+                    name: 'Ürün bilgisi yüklenemedi',
+                    price: item.price || 0,
+                    image_url: '',
+                    description: ''
+                  }
+                };
+              }
+              return item;
+            });
+            
+            setCartItems(validatedCart);
+          } catch (error) {
+            console.error('Sepet verisi ayrıştırılırken hata:', error);
+            setCartItems([]);
+            localStorage.setItem('cart', JSON.stringify([]));
+          }
+        } else {
+          console.log('Yerel sepet bulunamadı, boş sepet oluşturuluyor');
+          setCartItems([]);
+          localStorage.setItem('cart', JSON.stringify([]));
+        }
+        setLoading(false);
+      }
+    };
+    
+    checkCart();
+  }, []); // Sadece bir kez çalış
+  
+  // Kullanıcı değiştiğinde sepeti güncelle
+  useEffect(() => {
+    console.log('Kullanıcı durumu değişti, sepet güncelleniyor:', user ? 'Giriş yapılmış' : 'Giriş yapılmamış');
     if (user) {
       fetchCartItems();
     } else {
-      // Kullanıcı giriş yapmamışsa, yerel depolamadan sepeti yükle
+      // Kullanıcı çıkış yaptığında yerel depolamadan sepeti yükle
       const localCart = localStorage.getItem('cart');
       if (localCart) {
-        setCartItems(JSON.parse(localCart));
+        try {
+          setCartItems(JSON.parse(localCart));
+        } catch (error) {
+          console.error('Sepet verisi ayrıştırılırken hata:', error);
+          setCartItems([]);
+        }
       } else {
         setCartItems([]);
       }
@@ -25,9 +85,41 @@ export function CartProvider({ children }) {
     }
   }, [user]);
 
+  // Farklı sekmelerde localStorage senkronizasyonu için storage event dinleyicisi
+  useEffect(() => {
+    if (!user) {
+      // Storage event listener ekleniyor
+      const handleStorageChange = (e) => {
+        console.log('Storage değişikliği algılandı:', e);
+        
+        // Sadece cart anahtarı değiştiğinde tepki ver
+        if (e.key === 'cart') {
+          try {
+            // cart silindiyse boş dizi kullan, değilse yeni değeri kullan
+            const newCart = e.newValue ? JSON.parse(e.newValue) : [];
+            console.log('Sepet güncelleniyor:', newCart);
+            setCartItems(newCart);
+          } catch (error) {
+            console.error('Sepet verisi ayrıştırılırken hata:', error);
+          }
+        }
+      };
+
+      // Event listener'ı ekle
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Component unmount olduğunda event listener'ı kaldır
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, [user]);
+
   // Sepet değiştiğinde yerel depolamayı güncelle (giriş yapmamış kullanıcılar için)
   useEffect(() => {
-    if (!user && cartItems.length > 0) {
+    if (!user) {
+      console.log('Sepet değişti, localStorage güncelleniyor:', cartItems);
+      // Her durumda sepeti kaydet (boş olsa bile)
       localStorage.setItem('cart', JSON.stringify(cartItems));
     }
   }, [cartItems, user]);
@@ -176,6 +268,20 @@ export function CartProvider({ children }) {
   const addToCartLocally = (product, quantity, color, size) => {
     console.log('Oturum açmamış kullanıcı için yerel depolamaya ekleniyor');
     
+    // Ürün nesnesi içindeki tüm gerekli bilgileri saklayacağız
+    // Böylece sayfa yenilendiğinde ürün bilgileri korunacak
+    const safeProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image_url: product.image_url,
+      description: product.description,
+      // Diğer gerekli ürün bilgilerini ekle
+      stock: product.stock,
+      category: product.category,
+      subcategory: product.subcategory
+    };
+    
     const existingItemIndex = cartItems.findIndex(
       item => item.product_id === product.id && 
              item.color === color && 
@@ -196,7 +302,7 @@ export function CartProvider({ children }) {
           {
             id: Date.now().toString(),
             product_id: product.id,
-            product: product,
+            product: safeProduct, // Tam ürün nesnesi yerine sadece gerekli bilgileri içeren nesne
             quantity,
             color,
             size,
@@ -262,12 +368,8 @@ export function CartProvider({ children }) {
       const updatedItems = cartItems.filter(item => item.id !== itemId);
       setCartItems(updatedItems);
       
-      // Yerel depolamayı güncelle
-      if (updatedItems.length > 0) {
-        localStorage.setItem('cart', JSON.stringify(updatedItems));
-      } else {
-        localStorage.removeItem('cart');
-      }
+      // Yerel depolamayı güncelle (boş olsa bile array olarak)
+      localStorage.setItem('cart', JSON.stringify(updatedItems));
       
       console.log('Ürün başarıyla yerel sepetten silindi');
       return true;
@@ -374,16 +476,10 @@ export function CartProvider({ children }) {
     }
   };
 
+  // Sepeti lokalde temizle (giriş yapmamış kullanıcılar için)
   const clearCartLocally = () => {
-    try {
-      localStorage.removeItem('guestCart');
-      setCartItems([]);
-      console.log('Yerel sepet başarıyla temizlendi');
-      return true;
-    } catch (error) {
-      console.error('Yerel sepet temizleme hatası:', error);
-      return false;
-    }
+    setCartItems([]);
+    localStorage.setItem('cart', JSON.stringify([]));
   };
 
   const getCartTotal = () => {
