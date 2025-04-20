@@ -65,7 +65,7 @@ export default function Dashboard() {
       <Grid>
         <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
           <StatsCard
-            title="Toplam Ürün"
+            title="Toplam Ürün Sayısı"
             value={stats.totalProducts}
             icon={IconPackage}
           />
