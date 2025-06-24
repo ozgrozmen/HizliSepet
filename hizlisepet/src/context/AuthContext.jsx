@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { supabase } from '../lib/supabase';
 
@@ -13,18 +13,20 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Admin kontrolü için basit fonksiyon
-  const isAdmin = () => {
+  const isAdmin = useCallback(() => {
     return profile?.role === 'admin';
-  };
+  }, [profile]);
 
   // Kullanıcı profilini getir
-  const fetchUserProfile = async (userId) => {
+  const fetchUserProfile = useCallback(async (userId) => {
+    if (!userId) return null;
+    
     try {
-      console.log('Profil yükleniyor:', userId);
+      console.log('👤 Profil yükleniyor:', userId);
       
-      // Timeout kaldırıldı - direkt sorgu
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -32,10 +34,10 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Profil hatası:', error);
+        console.warn('⚠️ Profil hatası:', error.message);
         
-        // Bilinen admin email'leri için fallback
-        const { data: { user } } = await supabase.auth.getUser();
+        // Fallback profil oluştur
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         const knownAdminEmails = [
           'sefedemircan@gmail.com',
           'ozgrozmen7@gmail.com', 
@@ -45,22 +47,21 @@ export const AuthProvider = ({ children }) => {
           'tiryaki2424@gmail.com'
         ];
         
-        const isKnownAdmin = knownAdminEmails.includes(user?.email);
+        const isKnownAdmin = knownAdminEmails.includes(currentUser?.email);
         
         return {
           id: userId,
-          email: user?.email,
+          email: currentUser?.email,
           role: isKnownAdmin ? 'admin' : 'user',
           is_fallback: true
         };
       }
 
-      console.log('Profil yüklendi:', data.role);
+      console.log('✅ Profil yüklendi:', data.role);
       return data;
     } catch (err) {
-      console.error('Profil yükleme hatası:', err);
+      console.error('❌ Profil yükleme hatası:', err);
       
-      // Timeout durumunda da fallback döndür
       return {
         id: userId, 
         role: 'user', 
@@ -68,148 +69,154 @@ export const AuthProvider = ({ children }) => {
         is_error: true
       };
     }
-  };
+  }, []);
 
+  // Session'ı temizle
+  const clearSession = useCallback(() => {
+    console.log('🧹 Session temizleniyor...');
+    setUser(null);
+    setProfile(null);
+    setAuthError(null);
+  }, []);
+
+  // Session'ı yükle
+  const loadSession = useCallback(async (session) => {
+    if (!session?.user) {
+      clearSession();
+      return;
+    }
+
+    console.log('📦 Session yükleniyor:', session.user.email);
+    setUser(session.user);
+    
+    try {
+      const userProfile = await fetchUserProfile(session.user.id);
+      setProfile(userProfile);
+      console.log('👤 Kullanıcı rolü:', userProfile?.role);
+    } catch (error) {
+      console.error('❌ Profil yükleme hatası:', error);
+      setProfile({
+        id: session.user.id, 
+        email: session.user.email,
+        role: 'user',
+        is_error: true
+      });
+    }
+  }, [fetchUserProfile, clearSession]);
+
+  // Auth durumunu initialize et
   useEffect(() => {
     let mounted = true;
-    let initTimeout;
-    let isInitializing = false;
+    let authSubscription = null;
 
     const initializeAuth = async () => {
-      // Eğer zaten initialization devam ediyorsa, tekrar başlatma
-      if (isInitializing) {
-        console.log('Auth initialization zaten devam ediyor, atlaniyor...');
-        return;
-      }
-
-      isInitializing = true;
-
       try {
-        console.log('Auth başlatılıyor...');
+        console.log('🔐 Auth başlatılıyor...');
         
-        // Önce Supabase'in hazır olup olmadığını kontrol et
-        const { data, error } = await supabase.auth.getSession();
+        // Mevcut session'ı kontrol et
+        const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('Session hatası:', error);
+          console.error('❌ Session alınamadı:', error);
           if (mounted) {
-            setUser(null);
-            setProfile(null);
-          setLoading(false);
+            clearSession();
+            setLoading(false);
+            setIsInitialized(true);
           }
           return;
         }
 
-        if (data?.session) {
-          console.log('Session bulundu:', data.session.user.email);
-          if (mounted) {
-          setUser(data.session.user);
-            
-            // Profil yükle - basit timeout ile
-            try {
-              const userProfile = await fetchUserProfile(data.session.user.id);
-              setProfile(userProfile);
-              console.log('Kullanıcı rolü:', userProfile?.role);
-          } catch (profileError) {
-              console.warn('Profil yükleme hatası, fallback kullanılıyor:', profileError);
-              // Fallback profil oluştur
-              setProfile({
-                id: data.session.user.id, 
-                email: data.session.user.email,
-                role: 'user',
-                is_timeout: true
-              });
-            }
-          }
-        } else {
-          console.log('Session yok');
-          if (mounted) {
-          setUser(null);
-          setProfile(null);
-          }
-        }
-      } catch (err) {
-        console.error('Auth init error:', err);
-        // Hata durumunda da state'leri temizle
         if (mounted) {
-          setUser(null);
-          setProfile(null);
-        }
-      } finally {
-        isInitializing = false;
-        if (mounted) {
+          if (session) {
+            await loadSession(session);
+          } else {
+            console.log('ℹ️ Session bulunamadı');
+            clearSession();
+          }
+          
           setLoading(false);
+          setIsInitialized(true);
+        }
+
+      } catch (err) {
+        console.error('❌ Auth init hatası:', err);
+        if (mounted) {
+          clearSession();
+          setLoading(false);
+          setIsInitialized(true);
         }
       }
     };
 
-    // Kısa bir delay ile initialize et (çoklu çağrıları önlemek için)
-    const timeoutId = setTimeout(() => {
-    initializeAuth();
-    }, 100);
-
-    // Auth state değişikliklerini dinle
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Auth state change listener
+    const setupAuthListener = () => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth State Change:', event);
+        console.log(`🔄 Auth Event: ${event}`);
         
-        if (event === 'SIGNED_IN' && session) {
-          console.log('Giriş yapıldı:', session.user.email);
-          setUser(session.user);
-          
-          try {
-            const userProfile = await fetchUserProfile(session.user.id);
-              setProfile(userProfile);
-            console.log('Kullanıcı rolü:', userProfile?.role);
-          } catch (error) {
-            console.error('Auth state change profil yükleme hatası:', error);
-            setProfile({
-                id: session.user.id, 
-              email: session.user.email,
-              role: 'user',
-              is_error: true
-            });
-          }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('Çıkış yapıldı');
-          setUser(null);
-          setProfile(null);
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          console.log('Token yenilendi:', session.user.email);
-          setUser(session.user);
-          
-          // Profil varsa koru, yoksa yükle
-          if (!profile || profile.id !== session.user.id) {
-            try {
-              const userProfile = await fetchUserProfile(session.user.id);
-                setProfile(userProfile);
-            } catch (error) {
-              console.error('Token refresh profil yükleme hatası:', error);
+        switch (event) {
+          case 'INITIAL_SESSION':
+            // İlk session yüklemesi - initializeAuth tarafından handle edilir
+            break;
+            
+          case 'SIGNED_IN':
+            console.log('✅ Giriş yapıldı:', session?.user?.email);
+            if (session) {
+              await loadSession(session);
             }
-          }
+            break;
+            
+          case 'SIGNED_OUT':
+            console.log('👋 Çıkış yapıldı');
+            clearSession();
+            break;
+            
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 Token yenilendi:', session?.user?.email);
+            if (session) {
+              setUser(session.user);
+              // Profil zaten yüklüyse tekrar yükleme
+              if (!profile || profile.id !== session.user.id) {
+                const userProfile = await fetchUserProfile(session.user.id);
+                setProfile(userProfile);
+              }
+            }
+            break;
+            
+          case 'PASSWORD_RECOVERY':
+            console.log('🔑 Şifre sıfırlama');
+            break;
+            
+          default:
+            console.log(`⚠️ Bilinmeyen auth event: ${event}`);
         }
-        
-        // Auth state change'de loading'i false yap
-          setLoading(false);
-      }
-    );
+      });
+      
+      return data.subscription;
+    };
 
+    // Initialize
+    initializeAuth().then(() => {
+      if (mounted) {
+        authSubscription = setupAuthListener();
+      }
+    });
+
+    // Cleanup
     return () => {
       mounted = false;
-      isInitializing = false;
-      clearTimeout(timeoutId);
-      authListener.subscription.unsubscribe();
-      if (initTimeout) {
-        clearTimeout(initTimeout);
+      if (authSubscription) {
+        authSubscription.unsubscribe();
       }
     };
-  }, []);
+  }, [loadSession, clearSession, fetchUserProfile, profile]);
 
-  const signUp = async (email, password) => {
+  // Auth functions
+  const signUp = useCallback(async (email, password) => {
     setLoading(true);
     setAuthError(null);
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -221,15 +228,20 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
+      console.log('✅ Kayıt başarılı:', data.user?.email);
       return data;
+    } catch (error) {
+      console.error('❌ Kayıt hatası:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signIn = async (email, password) => {
+  const signIn = useCallback(async (email, password) => {
     setLoading(true);
     setAuthError(null);
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -241,31 +253,46 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('Giriş başarılı:', data.user.email);
+      console.log('✅ Giriş başarılı:', data.user?.email);
       return data;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
     } catch (error) {
-      console.error('Çıkış hatası:', error);
+      console.error('❌ Giriş hatası:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    setLoading(true);
+    
+    try {
+      console.log('👋 Çıkış yapılıyor...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Çıkış hatası:', error);
+        throw error;
+      }
+      
+      // Auth listener otomatik olarak clearSession'ı çağıracak
+      console.log('✅ Çıkış başarılı');
+    } catch (error) {
+      console.error('❌ Çıkış hatası:', error);
+      // Hata olsa bile local state'i temizle
+      clearSession();
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [clearSession]);
 
   const value = {
     user,
     profile,
     loading,
     authError,
+    isInitialized,
     isAdmin,
     signUp,
     signIn,

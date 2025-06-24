@@ -1,4 +1,5 @@
 import { Container } from '@mantine/core';
+import PropTypes from 'prop-types';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { ChatShortcut } from '../ChatShortcut';
@@ -21,4 +22,8 @@ export function Layout({ children }) {
       <ChatShortcut />
     </div>
   );
-} 
+}
+
+Layout.propTypes = {
+  children: PropTypes.node.isRequired
+}; 
