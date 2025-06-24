@@ -23,6 +23,7 @@ import { CategoriesPage } from './pages/admin/CategoriesPage';
 import { NewCategoryPage } from './pages/admin/NewCategoryPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CheckoutPage } from './pages/CheckoutPage';
+import { SearchPage } from './pages/SearchPage';
 import { ProtectedRoute } from './components/Admin/ProtectedRoute';
 
 function App() {
@@ -68,6 +69,11 @@ function App() {
                   <Route path="/product/:productId" element={
                     <Layout>
                       <ProductDetail />
+                    </Layout>
+                  } />
+                  <Route path="/search" element={
+                    <Layout>
+                      <SearchPage />
                     </Layout>
                   } />
                   <Route path="/favorites" element={

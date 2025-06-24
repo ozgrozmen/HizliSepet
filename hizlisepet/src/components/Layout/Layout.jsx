@@ -1,6 +1,7 @@
 import { Container } from '@mantine/core';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { ChatShortcut } from '../ChatShortcut';
 
 export function Layout({ children }) {
   return (
@@ -17,6 +18,7 @@ export function Layout({ children }) {
         </Container>
       </main>
       <Footer />
+      <ChatShortcut />
     </div>
   );
 } 

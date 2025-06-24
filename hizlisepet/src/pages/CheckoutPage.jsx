@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Title,
@@ -39,6 +39,29 @@ import {
   IconHome2
 } from '@tabler/icons-react';
 
+// Telefon numarasını (5XX) XXX XX XX formatına çeviren fonksiyon
+function formatPhoneNumber(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+  let formatted = '';
+  if (digits.length <= 3) {
+    formatted = `(${digits}`;
+    if (digits.length === 3) formatted += ')';
+    return formatted;
+  }
+  formatted = `(${digits.slice(0, 3)})`;
+  if (digits.length <= 6) {
+    formatted += ` ${digits.slice(3)}`;
+    return formatted;
+  }
+  if (digits.length <= 8) {
+    formatted += ` ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    return formatted;
+  }
+  formatted += ` ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8, 10)}`;
+  return formatted.trim();
+}
+
 export function CheckoutPage() {
   const { user } = useAuth();
   const { cartItems, getCartTotal, clearCart } = useCart();
@@ -70,6 +93,9 @@ export function CheckoutPage() {
   
   // Kart bilgileri görüntüleme seçeneği
   const [showCardForm, setShowCardForm] = useState(true);
+  
+  // Telefon inputu için ref
+  const phoneInputRef = useRef(null);
   
   useEffect(() => {
     // Oturum kontrolü yap
@@ -155,11 +181,20 @@ export function CheckoutPage() {
   };
   
   const validateShippingForm = () => {
-    if (!shippingForm.fullName) return 'Ad Soyad bilgisi gereklidir';
-    if (!shippingForm.phone) return 'Telefon numarası gereklidir';
-    if (!shippingForm.address) return 'Adres bilgisi gereklidir';
-    if (!shippingForm.city) return 'Şehir bilgisi gereklidir';
-    if (!shippingForm.district) return 'İlçe bilgisi gereklidir';
+    if (!shippingForm.fullName?.trim()) return 'Ad Soyad bilgisi gereklidir';
+    if (shippingForm.fullName.trim().length < 3) return 'Ad Soyad en az 3 karakter olmalıdır';
+    
+    if (!shippingForm.phone?.trim()) return 'Telefon numarası gereklidir';
+    const phoneDigits = shippingForm.phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) return 'Geçerli bir telefon numarası giriniz';
+    if (phoneDigits[0] !== '5') return 'Telefon numarası 5 ile başlamalıdır';
+    
+    if (!shippingForm.address?.trim()) return 'Adres bilgisi gereklidir';
+    if (shippingForm.address.trim().length < 10) return 'Lütfen daha detaylı bir adres giriniz';
+    
+    if (!shippingForm.city?.trim()) return 'Şehir bilgisi gereklidir';
+    if (!shippingForm.district?.trim()) return 'İlçe bilgisi gereklidir';
+    
     return null;
   };
   
@@ -210,21 +245,37 @@ export function CheckoutPage() {
     try {
       setLoading(true);
       
+      // Form validasyonu
+      const shippingError = validateShippingForm();
+      if (shippingError) {
+        throw new Error(shippingError);
+      }
+
+      // Telefon numarası kontrolü
+      const phoneDigits = shippingForm.phone.replace(/\D/g, '');
+      if (phoneDigits.length !== 10) {
+        throw new Error('Lütfen geçerli bir telefon numarası girin');
+      }
+
       // Sipariş özeti
       const totalAmount = getCartTotal();
-      const discountedTotal = totalAmount * 0.9; // %10 indirim (örnek)
+      if (!totalAmount || totalAmount <= 0) {
+        throw new Error('Geçersiz sipariş tutarı');
+      }
+
+      const discountedTotal = totalAmount * 0.9; // %10 indirim
       const paymentMethod = paymentForm.paymentMethod === 'credit_card' 
         ? `Kredi Kartı (${paymentForm.cardNumber.slice(-4)})` 
         : 'Kapıda Ödeme';
-      
+
       // Shipping address JSON formatında
       const shippingAddressJson = {
-        fullName: shippingForm.fullName,
-        address: shippingForm.address,
-        city: shippingForm.city,
-        district: shippingForm.district,
-        postalCode: shippingForm.postalCode,
-        phone: shippingForm.phone
+        fullName: shippingForm.fullName.trim(),
+        address: shippingForm.address.trim(),
+        city: shippingForm.city.trim(),
+        district: shippingForm.district.trim(),
+        postalCode: shippingForm.postalCode.trim(),
+        phone: phoneDigits
       };
 
       // Siparişi oluştur
@@ -237,40 +288,61 @@ export function CheckoutPage() {
             status: 'pending',
             shipping_address: shippingAddressJson,
             payment_method: paymentMethod,
-            phone: shippingForm.phone
+            phone: phoneDigits
           }
         ])
         .select();
       
       if (orderError) {
         console.error('Sipariş oluşturulurken hata:', orderError);
-        throw orderError;
+        throw new Error('Sipariş oluşturulamadı: ' + orderError.message);
+      }
+
+      if (!orderData || orderData.length === 0) {
+        throw new Error('Sipariş oluşturulamadı: Veri döndürülemedi');
       }
       
       const orderId = orderData[0].id;
       setNewOrderId(orderId);
       
-      // Sipariş öğelerini oluştur
+      // Sipariş öğelerini hazırla ve kontrol et
       const orderItems = cartItems.map(item => {
-        const itemPrice = item.product?.price || item.price || 0;
-        const itemTotal = itemPrice * item.quantity;
+        if (!item.product_id || !item.quantity || !item.price) {
+          throw new Error('Geçersiz ürün bilgisi');
+        }
+
+        const itemPrice = Number(item.price);
+        const itemQuantity = Number(item.quantity);
+        
+        if (isNaN(itemPrice) || isNaN(itemQuantity) || itemPrice <= 0 || itemQuantity <= 0) {
+          throw new Error('Geçersiz ürün fiyatı veya miktarı');
+        }
+
+        const itemTotal = itemPrice * itemQuantity;
         
         return {
           order_id: orderId,
           product_id: item.product_id,
-          quantity: item.quantity,
+          quantity: itemQuantity,
           price: itemPrice,
           total: itemTotal
         };
       });
       
+      // Sipariş öğelerini kaydet
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
       
       if (itemsError) {
+        // Sipariş öğeleri eklenemezse siparişi iptal et
+        await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderId);
+        
         console.error('Sipariş öğeleri oluşturulurken hata:', itemsError);
-        throw itemsError;
+        throw new Error('Sipariş öğeleri eklenemedi: ' + itemsError.message);
       }
       
       // Sepeti temizle
@@ -283,7 +355,7 @@ export function CheckoutPage() {
       console.error('Sipariş tamamlanırken hata:', error);
       notifications.show({
         title: 'Sipariş Hatası',
-        message: 'Siparişiniz oluşturulurken bir hata oluştu: ' + error.message,
+        message: error.message || 'Siparişiniz oluşturulurken bir hata oluştu',
         color: 'red'
       });
     } finally {
@@ -341,12 +413,124 @@ export function CheckoutPage() {
         />
       </Stepper>
       
+      {/* Sadece onay adımında Paper ile çerçeve göster */}
+      {activeStep === 2 ? (
       <Paper p="md" withBorder radius="md" mb="xl">
+          {activeStep === 2 && (
+            <>
+              <Title order={2} mb="lg" ta="center" c="blue.7" style={{ letterSpacing: 1 }}>Sipariş Özeti</Title>
+              <Group align="flex-start" grow wrap="wrap" mb="lg" spacing="xl">
+                <Box style={{ minWidth: 320, flex: 1 }}>
+                  <Card withBorder shadow="md" radius="lg" p="lg" mb="md" style={{ background: '#f8fafc' }}>
+                    <Group align="center" mb="sm">
+                      <IconHome2 size={22} color="#228be6" />
+                      <Title order={5} c="blue.7" style={{ letterSpacing: 0.5 }}>Teslimat Adresi</Title>
+                    </Group>
+                    <Divider mb="sm" />
+                    <Text fw={600}>{shippingForm.fullName}</Text>
+                    <Text size="sm" c="dimmed">{shippingForm.address}</Text>
+                    <Text size="sm" c="dimmed">{shippingForm.district}/{shippingForm.city} {shippingForm.postalCode}</Text>
+                    <Text size="sm" c="blue.7">Tel: {shippingForm.phone}</Text>
+                  </Card>
+                  <Card withBorder shadow="md" radius="lg" p="lg" mb="md" style={{ background: '#f8fafc' }}>
+                    <Group align="center" mb="sm">
+                      <IconCreditCard size={20} color="#228be6" />
+                      <Title order={5} c="blue.7">Ödeme Bilgileri</Title>
+                    </Group>
+                    <Divider mb="sm" />
+                    <Text fw={500} size="md">
+                      {paymentForm.paymentMethod === 'credit_card' 
+                        ? `Kredi Kartı (${paymentForm.cardNumber.slice(-4)})` 
+                        : 'Kapıda Ödeme'}
+                    </Text>
+                  </Card>
+                </Box>
+                <Box style={{ minWidth: 320, flex: 2 }}>
+                  <Card withBorder shadow="md" radius="lg" p="lg" mb="md" style={{ background: '#f8fafc' }}>
+                    <Group align="center" mb="sm">
+                      <IconShoppingCart size={20} color="#228be6" />
+                      <Title order={5} c="blue.7">Sipariş Öğeleri</Title>
+                    </Group>
+                    <Divider mb="sm" />
+                    <Group gap="md" style={{ flexWrap: 'wrap' }}>
+                      {cartItems.map((item) => (
+                        <Card key={item.id} withBorder radius="md" shadow="sm" p="xs" style={{ minWidth: 220, maxWidth: 260, background: '#fff' }}>
+                          <Group>
+                            <Image
+                              src={item.product.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
+                              width={60}
+                              height={60}
+                              fit="contain"
+                              radius="md"
+                              style={{ background: '#f1f3f5' }}
+                            />
+                            <Box style={{ flex: 1 }}>
+                              <Text fw={600}>{item.product.name}</Text>
+                              <Text size="sm" c="dimmed">Miktar: {item.quantity}</Text>
+                              <Text fw={600} c="blue.7">{formatPrice((item.price || item.product.price) * item.quantity)}</Text>
+                            </Box>
+                          </Group>
+                        </Card>
+                      ))}
+                    </Group>
+                  </Card>
+                  <Card withBorder shadow="md" radius="lg" p="lg" style={{ background: '#e7f5ff' }}>
+                    <Group justify="space-between" mb="xs">
+                      <Text>Ürünler Toplamı:</Text>
+                      <Text>{formatPrice(totalAmount)}</Text>
+                    </Group>
+                    <Group justify="space-between" mb="xs">
+                      <Text>İndirim:</Text>
+                      <Text c="green">-{formatPrice(totalAmount - discountedTotal)}</Text>
+                    </Group>
+                    <Group justify="space-between" mb="xs">
+                      <Text>Kargo:</Text>
+                      <Text>Ücretsiz</Text>
+                    </Group>
+                    {paymentForm.paymentMethod === 'cash_on_delivery' && (
+                      <Group justify="space-between" mb="xs">
+                        <Text>Kapıda Ödeme Ücreti:</Text>
+                        <Text>+15,00 TL</Text>
+                      </Group>
+                    )}
+                    <Divider my="sm" />
+                    <Group justify="space-between">
+                      <Text fw={700} size="lg">Toplam:</Text>
+                      <Text fw={700} size="xl" c="blue.7">
+                        {formatPrice(discountedTotal + (paymentForm.paymentMethod === 'cash_on_delivery' ? 15 : 0))}
+                      </Text>
+                    </Group>
+                  </Card>
+                </Box>
+              </Group>
+              <Group justify="space-between" mt="xl">
+                <Button variant="outline" size="lg" onClick={handlePreviousStep} radius="md">
+                  Geri
+                </Button>
+                <Button 
+                  color="green" 
+                  size="lg"
+                  radius="md"
+                  onClick={handleCompleteOrder}
+                  leftSection={<IconShoppingCart size={18} />}
+                  style={{ minWidth: 200 }}
+                >
+                  Siparişi Tamamla
+                </Button>
+              </Group>
+            </>
+          )}
+        </Paper>
+      ) : (
+        // Teslimat ve ödeme adımlarında Paper olmadan sadece Card göster
+        <>
         {activeStep === 0 && (
           <>
-            <Title order={3} mb="md">Teslimat Bilgileri</Title>
-            
-            <Grid>
+              <Title order={2} mb="lg" ta="center" c="blue.7" style={{ letterSpacing: 1 }}>
+                <Group justify="center" gap={8}><IconMapPin size={28} color="#228be6" />Teslimat Bilgileri</Group>
+              </Title>
+              <Card withBorder shadow="md" radius="lg" p="xl" style={{ background: '#f8fafc', maxWidth: 700, margin: '0 auto' }}>
+                <Grid gutter="md">
               <Grid.Col span={{ base: 12, md: 6 }}>
                 <TextInput
                   label="Ad Soyad"
@@ -357,18 +541,40 @@ export function CheckoutPage() {
                   mb="md"
                 />
               </Grid.Col>
-              
               <Grid.Col span={{ base: 12, md: 6 }}>
                 <TextInput
                   label="Telefon"
-                  placeholder="0(5XX) XXX XX XX"
-                  value={shippingForm.phone}
-                  onChange={(e) => handleShippingFormChange('phone', e.target.value)}
+                      placeholder="(5XX) XXX XX XX"
+                      value={formatPhoneNumber(shippingForm.phone)}
+                      maxLength={15}
+                      inputMode="numeric"
+                      ref={phoneInputRef}
+                      onChange={(e) => {
+                        let digits = e.target.value.replace(/\D/g, '');
+                        if (digits.length > 0 && digits[0] !== '5') digits = '5' + digits.slice(1);
+                        digits = digits.slice(0, 10);
+                        handleShippingFormChange('phone', digits);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace') {
+                          const input = phoneInputRef.current;
+                          const pos = input.selectionStart;
+                          const raw = shippingForm.phone;
+                          const formatted = formatPhoneNumber(raw);
+                          if (pos > 0 && (formatted[pos - 1] === '(' || formatted[pos - 1] === ')' || formatted[pos - 1] === ' ')) {
+                            e.preventDefault();
+                            let digits = raw.slice(0, raw.length - 1);
+                            handleShippingFormChange('phone', digits);
+                            setTimeout(() => {
+                              input.setSelectionRange(pos - 1, pos - 1);
+                            }, 0);
+                          }
+                        }
+                      }}
                   required
                   mb="md"
                 />
               </Grid.Col>
-              
               <Grid.Col span={12}>
                 <Textarea
                   label="Adres"
@@ -380,7 +586,6 @@ export function CheckoutPage() {
                   minRows={3}
                 />
               </Grid.Col>
-              
               <Grid.Col span={{ base: 12, md: 4 }}>
                 <TextInput
                   label="Şehir"
@@ -391,7 +596,6 @@ export function CheckoutPage() {
                   mb="md"
                 />
               </Grid.Col>
-              
               <Grid.Col span={{ base: 12, md: 4 }}>
                 <TextInput
                   label="İlçe"
@@ -402,7 +606,6 @@ export function CheckoutPage() {
                   mb="md"
                 />
               </Grid.Col>
-              
               <Grid.Col span={{ base: 12, md: 4 }}>
                 <TextInput
                   label="Posta Kodu"
@@ -413,22 +616,27 @@ export function CheckoutPage() {
                 />
               </Grid.Col>
             </Grid>
-            
             <Group justify="flex-end" mt="xl">
               <Button
                 onClick={handleNextStep}
-                rightSection={<IconTruck size={16} />}
+                    rightSection={<IconTruck size={18} />}
+                    size="lg"
+                    radius="md"
+                    style={{ minWidth: 180 }}
               >
                 Devam Et
               </Button>
             </Group>
+              </Card>
           </>
         )}
         
         {activeStep === 1 && (
           <>
-            <Title order={3} mb="md">Ödeme Bilgileri</Title>
-            
+              <Title order={2} mb="lg" ta="center" c="blue.7" style={{ letterSpacing: 1 }}>
+                <Group justify="center" gap={8}><IconCreditCard size={26} color="#228be6" />Ödeme Bilgileri</Group>
+              </Title>
+              <Card withBorder shadow="md" radius="lg" p="xl" style={{ background: '#f8fafc', maxWidth: 700, margin: '0 auto' }}>
             <Radio.Group
               label="Ödeme Yöntemi"
               value={paymentForm.paymentMethod}
@@ -440,9 +648,8 @@ export function CheckoutPage() {
                 <Radio value="cash_on_delivery" label="Kapıda Ödeme" />
               </Group>
             </Radio.Group>
-            
             {showCardForm && (
-              <Grid>
+                  <Grid gutter="md">
                 <Grid.Col span={12}>
                   <TextInput
                     label="Kart Üzerindeki İsim"
@@ -453,7 +660,6 @@ export function CheckoutPage() {
                     mb="md"
                   />
                 </Grid.Col>
-                
                 <Grid.Col span={12}>
                   <TextInput
                     label="Kart Numarası"
@@ -464,7 +670,6 @@ export function CheckoutPage() {
                     mb="md"
                   />
                 </Grid.Col>
-                
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <Select
                     label="Son Kullanma Ayı"
@@ -489,7 +694,6 @@ export function CheckoutPage() {
                     mb="md"
                   />
                 </Grid.Col>
-                
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <Select
                     label="Son Kullanma Yılı"
@@ -504,7 +708,6 @@ export function CheckoutPage() {
                     mb="md"
                   />
                 </Grid.Col>
-                
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <TextInput
                     label="CVV"
@@ -517,7 +720,6 @@ export function CheckoutPage() {
                 </Grid.Col>
               </Grid>
             )}
-            
             {!showCardForm && (
               <Alert
                 icon={<IconAlertCircle size={16} />}
@@ -526,125 +728,22 @@ export function CheckoutPage() {
                 variant="light"
                 mb="md"
               >
-                Siparişiniz, belirttiğiniz adrese teslim edildiğinde kapıda ödeme yapabilirsiniz.
-                Kapıda ödeme ek ücreti: 15 TL
+                    Siparişiniz, belirttiğiniz adrese teslim edildiğinde kapıda ödeme yapabilirsiniz.<br />Kapıda ödeme ek ücreti: 15 TL
               </Alert>
             )}
-            
             <Group justify="space-between" mt="xl">
-              <Button variant="outline" onClick={handlePreviousStep}>
+                  <Button variant="outline" size="lg" onClick={handlePreviousStep} radius="md">
                 Geri
               </Button>
-              <Button onClick={handleNextStep}>
+                  <Button onClick={handleNextStep} size="lg" color="blue" radius="md" style={{ minWidth: 180 }}>
                 Devam Et
               </Button>
-            </Group>
+                </Group>
+              </Card>
+            </>
+          )}
           </>
         )}
-        
-        {activeStep === 2 && (
-          <>
-            <Title order={3} mb="md">Sipariş Özeti</Title>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Teslimat Adresi</Title>
-              <Card withBorder p="sm">
-                <Group align="flex-start" mb="xs">
-                  <IconHome2 size={18} />
-                  <Box>
-                    <Text fw={500}>{shippingForm.fullName}</Text>
-                    <Text size="sm">{shippingForm.address}</Text>
-                    <Text size="sm">{shippingForm.district}/{shippingForm.city} {shippingForm.postalCode}</Text>
-                    <Text size="sm">Tel: {shippingForm.phone}</Text>
-                  </Box>
-                </Group>
-              </Card>
-            </Box>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Ödeme Bilgileri</Title>
-              <Card withBorder p="sm">
-                <Text>
-                  {paymentForm.paymentMethod === 'credit_card' 
-                    ? `Kredi Kartı (${paymentForm.cardNumber.slice(-4)})` 
-                    : 'Kapıda Ödeme'}
-                </Text>
-              </Card>
-            </Box>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Sipariş Öğeleri</Title>
-              {cartItems.map((item) => (
-                <Card key={item.id} withBorder p="sm" mb="sm">
-                  <Group>
-                    <Image
-                      src={item.product.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
-                      width={60}
-                      height={60}
-                      fit="contain"
-                    />
-                    <Box style={{ flex: 1 }}>
-                      <Group position="apart">
-                        <Text fw={500}>{item.product.name}</Text>
-                        <Text fw={500}>{formatPrice((item.price || item.product.price) * item.quantity)}</Text>
-                      </Group>
-                      <Text size="sm" c="dimmed">Miktar: {item.quantity}</Text>
-                    </Box>
-                  </Group>
-                </Card>
-              ))}
-            </Box>
-            
-            <Box>
-              <Card withBorder p="md">
-                <Group justify="space-between" mb="xs">
-                  <Text>Ürünler Toplamı:</Text>
-                  <Text>{formatPrice(totalAmount)}</Text>
-                </Group>
-                
-                <Group justify="space-between" mb="xs">
-                  <Text>İndirim:</Text>
-                  <Text c="green">-{formatPrice(totalAmount - discountedTotal)}</Text>
-                </Group>
-                
-                <Group justify="space-between" mb="xs">
-                  <Text>Kargo:</Text>
-                  <Text>Ücretsiz</Text>
-                </Group>
-                
-                {paymentForm.paymentMethod === 'cash_on_delivery' && (
-                  <Group justify="space-between" mb="xs">
-                    <Text>Kapıda Ödeme Ücreti:</Text>
-                    <Text>+15,00 TL</Text>
-                  </Group>
-                )}
-                
-                <Divider my="sm" />
-                
-                <Group justify="space-between">
-                  <Text fw={700} size="lg">Toplam:</Text>
-                  <Text fw={700} size="lg" c="blue">
-                    {formatPrice(discountedTotal + (paymentForm.paymentMethod === 'cash_on_delivery' ? 15 : 0))}
-                  </Text>
-                </Group>
-              </Card>
-            </Box>
-            
-            <Group justify="space-between" mt="xl">
-              <Button variant="outline" onClick={handlePreviousStep}>
-                Geri
-              </Button>
-              <Button 
-                color="green" 
-                onClick={handleCompleteOrder}
-                leftSection={<IconShoppingCart size={16} />}
-              >
-                Siparişi Tamamla
-              </Button>
-            </Group>
-          </>
-        )}
-      </Paper>
       
       {/* Başarılı Sipariş Modalı */}
       <Modal

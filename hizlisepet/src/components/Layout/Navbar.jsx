@@ -1,10 +1,16 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Group, TextInput, Container, ActionIcon, Menu, Button, Loader, Badge, Drawer } from '@mantine/core';
+import { Group, TextInput, Container, ActionIcon, Menu, Button, Loader, Badge, Drawer, Paper } from '@mantine/core';
 import { IconUser, IconSearch, IconHeart, IconDashboard, IconLogin, IconShoppingCart, IconMenu2 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Categories } from './Categories';
+import { searchProducts } from '../../lib/supabase';
+
+// İlk harfi büyük yapma fonksiyonu
+const capitalizeFirstLetter = (string) => {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
 
 // Navbar bileşenini memo ile optimize et
 export const Navbar = React.memo(() => {
@@ -12,9 +18,51 @@ export const Navbar = React.memo(() => {
   const { user, profile, loading, isAdmin, signOut } = useAuth();
   const { getCartItemCount } = useCart();
   const [sidebarOpened, setSidebarOpened] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   // Cart count'u memoize et
   const cartItemCount = useMemo(() => getCartItemCount(), [getCartItemCount]);
+
+  // Arama önerilerini getir
+  const fetchSuggestions = useCallback(async (term) => {
+    if (!term.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    try {
+      const results = await searchProducts(term);
+      setSuggestions(results);
+    } catch (error) {
+      console.error('Öneri getirme hatası:', error);
+      setSuggestions([]);
+    }
+  }, []);
+
+  // Arama terimini güncelle
+  const handleSearchChange = useCallback((e) => {
+    const value = capitalizeFirstLetter(e.target.value);
+    setSearchTerm(value);
+    setShowSuggestions(true);
+    fetchSuggestions(value);
+  }, [fetchSuggestions]);
+
+  // Arama işlemi
+  const handleSearch = useCallback(async (e) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+    
+    setShowSuggestions(false);
+    navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+  }, [searchTerm, navigate]);
+
+  // Öneri seçme
+  const handleSuggestionClick = useCallback((productId) => {
+    setShowSuggestions(false);
+    navigate(`/product/${productId}`);
+  }, [navigate]);
 
   // Event handler'ları useCallback ile optimize et
   const handleSignOut = useCallback(async () => {
@@ -100,11 +148,76 @@ export const Navbar = React.memo(() => {
           </Group>
 
           {/* Arama */}
-          <TextInput
-            placeholder="Ürün ara..."
-            leftSection={<IconSearch size={16} />}
-            style={{ width: '40%', maxWidth: '400px' }}
-          />
+          <div style={{ width: '40%', maxWidth: '400px', position: 'relative' }}>
+            <form onSubmit={handleSearch}>
+              <TextInput
+                placeholder="Ürün ara..."
+                leftSection={<IconSearch size={16} />}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onBlur={() => {
+                  // Tıklama eventi öneri seçiminden önce tetiklenmesin diye timeout kullan
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                style={{ width: '100%' }}
+              />
+            </form>
+
+            {/* Öneriler */}
+            {showSuggestions && suggestions.length > 0 && (
+              <Paper
+                shadow="md"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  marginTop: '4px'
+                }}
+              >
+                {suggestions.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleSuggestionClick(product.id)}
+                    style={{
+                      padding: '10px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #eee',
+                      '&:hover': {
+                        backgroundColor: '#f8f9fa'
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          objectFit: 'cover',
+                          borderRadius: '4px'
+                        }}
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/40x40';
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{product.name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {product.price} TL
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Paper>
+            )}
+          </div>
 
           {/* Sağ Menü */}
           <Group gap="md">

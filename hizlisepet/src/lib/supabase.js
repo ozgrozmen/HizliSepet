@@ -4,43 +4,56 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://jrwplrptzvcrtsnfysqd.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyd3BscnB0enZjcnRzbmZ5c3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUzMjI2NzcsImV4cCI6MjA1MDg5ODY3N30.UGucjeIRao5FHS359sDpTHUbr6zQJzR5IPN-V0BK8kY'
 
+// Singleton pattern - tek bir Supabase instance'ı oluştur
+let supabaseInstance = null;
+
+const createSupabaseClient = () => {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      debug: false
+    },
+    db: {
+      schema: 'public'
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'hizlisepet-web'
+      },
+      fetch: (url, options = {}) => {
+        return fetch(url, {
+          ...options,
+          timeout: 8000 // 8 saniye timeout
+        });
+      }
+    },
+    // Session recovery timeout ekle
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    }
+  });
+
+  return supabaseInstance;
+};
+
+// Supabase client'ı export et
+export const supabase = createSupabaseClient();
+
 console.log('Supabase yapılandırması:', { 
   url: supabaseUrl, 
   keyLength: supabaseAnonKey ? supabaseAnonKey.length : 'undefined',
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey
 });
-
-// Authentication session persistence için optimize edilmiş client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    debug: false
-  },
-  db: {
-    schema: 'public'
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'hizlisepet-web'
-    },
-    fetch: (url, options = {}) => {
-      return fetch(url, {
-        ...options,
-        timeout: 8000 // 8 saniye timeout
-      });
-    }
-  },
-  // Session recovery timeout ekle
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-})
 
 // ÖNEMLİ: Ürün düzenleme işlemindeki temel sorun için yeni fonksiyon
 export async function updateProductWithFetch(productId, productData) {
@@ -172,13 +185,65 @@ export async function getProductsByCategory(category, subcategory = null) {
 
 // Ürün arama fonksiyonu
 export async function searchProducts(searchTerm) {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .ilike('name', `%${searchTerm}%`);
+  try {
+    console.log('Arama yapılıyor:', searchTerm);
+    
+    // Boş arama kontrolü
+    if (!searchTerm?.trim()) {
+      return [];
+    }
 
-  if (error) throw error;
-  return data;
+    // İlk kelimeyi al ve büyük harfle başlat
+    const searchWords = searchTerm.trim().split(' ');
+    const firstWord = searchWords[0];
+    
+    // İlk kelime için başlangıç kontrolü yap
+    const { data: exactMatches, error: exactError } = await supabase
+      .from('products')
+      .select('*')
+      .or(
+        // İlk kelime tam eşleşme
+        `name.ilike.${firstWord}%`,
+        // İlk kelime boşluktan sonra
+        `name.ilike.% ${firstWord}%`
+      )
+      .order('name')
+      .limit(5);
+
+    if (exactError) {
+      console.error('Tam eşleşme araması hatası:', exactError);
+      throw exactError;
+    }
+
+    // Eğer tam eşleşme varsa, sadece onları döndür
+    if (exactMatches && exactMatches.length > 0) {
+      console.log('Tam eşleşme sonuçları:', exactMatches.length);
+      return exactMatches;
+    }
+
+    // Tam eşleşme yoksa, içeren araması yap
+    const { data: partialMatches, error: partialError } = await supabase
+      .from('products')
+      .select('*')
+      .or(
+        `name.ilike.%${searchTerm}%`,
+        `brand.ilike.%${searchTerm}%`
+      )
+      .order('name')
+      .limit(5);
+
+    if (partialError) {
+      console.error('Kısmi eşleşme araması hatası:', partialError);
+      throw partialError;
+    }
+
+    console.log('Kısmi eşleşme sonuçları:', partialMatches?.length || 0);
+    return partialMatches || [];
+
+  } catch (err) {
+    console.error('Arama işlemi hatası:', err);
+    return [];
+  }
 }
 
 // UYARI: Sadece geliştirme ortamında kullanın!
