@@ -1,8 +1,28 @@
 import { useState, useEffect } from 'react';
-import { TextInput, PasswordInput, Button, Paper, Stack, Title, Text, Alert, Center, Container, Loader } from '@mantine/core';
+import { 
+  TextInput, 
+  PasswordInput, 
+  Button, 
+  Paper, 
+  Stack, 
+  Title, 
+  Text, 
+  Alert, 
+  Center, 
+  Container, 
+  Loader,
+  Transition,
+  Divider
+} from '@mantine/core';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { IconAlertCircle, IconInfoCircle } from '@tabler/icons-react';
+import { 
+  IconAlertCircle, 
+  IconInfoCircle, 
+  IconMail, 
+  IconLock, 
+  IconLogin 
+} from '@tabler/icons-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -52,77 +72,136 @@ export default function Login() {
     return (
       <Center style={{ height: '100vh', backgroundColor: '#f8f9fa' }}>
         <Stack align="center" spacing="md">
-          <Loader size="lg" />
-          <Text>Oturum kontrol ediliyor...</Text>
+          <Loader size="lg" variant="bars" color="blue" />
+          <Text size="lg" fw={500}>Oturum kontrol ediliyor...</Text>
         </Stack>
       </Center>
     );
   }
 
   return (
-    <Center style={{ height: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Center style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#f8f9fa',
+      background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+    }}>
       <Container size="xs">
-        <Paper radius="md" p="xl" withBorder>
-          <Title align="center" order={1} mb="md">
-            Giriş Yap
-          </Title>
+        <Transition mounted={true} transition="fade" duration={400} timingFunction="ease">
+          {(styles) => (
+            <Paper
+              radius="lg"
+              p="xl"
+              withBorder
+              shadow="md"
+              style={{
+                ...styles,
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <Title align="center" order={1} mb="lg" style={{ color: '#1a1b1e' }}>
+                HızlıSepet'e Hoş Geldiniz
+              </Title>
 
-          {authError && (
-            <Alert icon={<IconAlertCircle size={16} />} title="Sistem Hatası" color="red" mb="md">
-              {authError}
-            </Alert>
+              {authError && (
+                <Alert 
+                  icon={<IconAlertCircle size={16} />} 
+                  title="Sistem Hatası" 
+                  color="red" 
+                  mb="md"
+                  variant="light"
+                  radius="md"
+                >
+                  {authError}
+                </Alert>
+              )}
+
+              {formError && (
+                <Alert 
+                  icon={<IconAlertCircle size={16} />} 
+                  title="Hata" 
+                  color="red" 
+                  mb="md"
+                  variant="light"
+                  radius="md"
+                >
+                  {formError}
+                </Alert>
+              )}
+
+              {loginStatus && (
+                <Alert 
+                  icon={<IconInfoCircle size={16} />} 
+                  title="Bilgi" 
+                  color="blue" 
+                  mb="md"
+                  variant="light"
+                  radius="md"
+                >
+                  {loginStatus}
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <Stack spacing="md">
+                  <TextInput
+                    required
+                    label="E-posta"
+                    placeholder="ornek@mail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                    icon={<IconMail size={16} />}
+                    radius="md"
+                    size="md"
+                  />
+
+                  <PasswordInput
+                    required
+                    label="Şifre"
+                    placeholder="Şifreniz"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    icon={<IconLock size={16} />}
+                    radius="md"
+                    size="md"
+                  />
+
+                  <Button 
+                    type="submit" 
+                    fullWidth 
+                    loading={loading}
+                    disabled={!email || !password}
+                    size="md"
+                    radius="md"
+                    leftSection={<IconLogin size={20} />}
+                    gradient={{ from: 'blue', to: 'cyan' }}
+                    variant="gradient"
+                  >
+                    Giriş Yap
+                  </Button>
+                </Stack>
+              </form>
+
+              <Divider my="lg" label="veya" labelPosition="center" />
+
+              <Text align="center" size="sm" style={{ color: '#495057' }}>
+                Henüz hesabınız yok mu?{' '}
+                <Link 
+                  to="/signup" 
+                  style={{ 
+                    color: '#228be6', 
+                    textDecoration: 'none',
+                    fontWeight: 500
+                  }}
+                >
+                  Hemen Kayıt Olun
+                </Link>
+              </Text>
+            </Paper>
           )}
-
-          {formError && (
-            <Alert icon={<IconAlertCircle size={16} />} title="Hata" color="red" mb="md">
-              {formError}
-            </Alert>
-          )}
-
-          {loginStatus && (
-            <Alert icon={<IconInfoCircle size={16} />} title="Bilgi" color="blue" mb="md">
-              {loginStatus}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <Stack>
-              <TextInput
-                required
-                label="E-posta"
-                placeholder="ornek@mail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-
-              <PasswordInput
-                required
-                label="Şifre"
-                placeholder="Şifreniz"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-
-              <Button 
-                type="submit" 
-                fullWidth 
-                loading={loading}
-                disabled={!email || !password}
-              >
-                Giriş Yap
-              </Button>
-            </Stack>
-          </form>
-
-          <Text align="center" mt="md">
-            Henüz hesabınız yok mu?{' '}
-            <Link to="/signup" style={{ color: '#228be6', textDecoration: 'none' }}>
-              Kayıt Ol
-            </Link>
-          </Text>
-        </Paper>
+        </Transition>
       </Container>
     </Center>
   );

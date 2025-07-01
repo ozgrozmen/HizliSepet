@@ -81,7 +81,7 @@ export function ChatShortcut() {
 
       if (error) throw error;
       return orders;
-    } catch (error) {
+    } catch (ercd ror) {
       console.error('Siparişler alınırken hata:', error);
       return null;
     }
