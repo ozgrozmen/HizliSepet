@@ -71,18 +71,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Session'ı temizle
-  const clearSession = useCallback(() => {
-    console.log('🧹 Session temizleniyor...');
-    setUser(null);
-    setProfile(null);
-    setAuthError(null);
-  }, []);
-
   // Session'ı yükle
   const loadSession = useCallback(async (session) => {
     if (!session?.user) {
-      clearSession();
+      // clearSession'ı çağırmak yerine direkt işlemi yap
+      console.log('🧹 Session temizleniyor...');
+      setUser(null);
+      setProfile(null);
+      setAuthError(null);
       return;
     }
 
@@ -102,7 +98,7 @@ export const AuthProvider = ({ children }) => {
         is_error: true
       });
     }
-  }, [fetchUserProfile, clearSession]);
+  }, [fetchUserProfile]);
 
   // Auth durumunu initialize et
   useEffect(() => {
@@ -119,7 +115,11 @@ export const AuthProvider = ({ children }) => {
         if (error) {
           console.error('❌ Session alınamadı:', error);
           if (mounted) {
-            clearSession();
+            // clearSession inline
+            console.log('🧹 Session temizleniyor...');
+            setUser(null);
+            setProfile(null);
+            setAuthError(null);
             setLoading(false);
             setIsInitialized(true);
           }
@@ -131,7 +131,11 @@ export const AuthProvider = ({ children }) => {
             await loadSession(session);
           } else {
             console.log('ℹ️ Session bulunamadı');
-            clearSession();
+            // clearSession inline
+            console.log('🧹 Session temizleniyor...');
+            setUser(null);
+            setProfile(null);
+            setAuthError(null);
           }
           
           setLoading(false);
@@ -141,7 +145,11 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         console.error('❌ Auth init hatası:', err);
         if (mounted) {
-          clearSession();
+          // clearSession inline
+          console.log('🧹 Session temizleniyor...');
+          setUser(null);
+          setProfile(null);
+          setAuthError(null);
           setLoading(false);
           setIsInitialized(true);
         }
@@ -169,18 +177,20 @@ export const AuthProvider = ({ children }) => {
             
           case 'SIGNED_OUT':
             console.log('👋 Çıkış yapıldı');
-            clearSession();
+            // clearSession'ı inline yap
+            console.log('🧹 Session temizleniyor...');
+            setUser(null);
+            setProfile(null);
+            setAuthError(null);
             break;
             
           case 'TOKEN_REFRESHED':
             console.log('🔄 Token yenilendi:', session?.user?.email);
             if (session) {
               setUser(session.user);
-              // Profil zaten yüklüyse tekrar yükleme
-              if (!profile || profile.id !== session.user.id) {
-                const userProfile = await fetchUserProfile(session.user.id);
-                setProfile(userProfile);
-              }
+              // Profil güncellemesi için fetchUserProfile'ı direkt çağır
+              const userProfile = await fetchUserProfile(session.user.id);
+              setProfile(userProfile);
             }
             break;
             
@@ -210,7 +220,7 @@ export const AuthProvider = ({ children }) => {
         authSubscription.unsubscribe();
       }
     };
-  }, [loadSession, clearSession, fetchUserProfile, profile]);
+  }, [loadSession]);
 
   // Auth functions
   const signUp = useCallback(async (email, password) => {
@@ -279,13 +289,16 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ Çıkış başarılı');
     } catch (error) {
       console.error('❌ Çıkış hatası:', error);
-      // Hata olsa bile local state'i temizle
-      clearSession();
+      // Hata olsa bile local state'i temizle - inline
+      console.log('🧹 Session temizleniyor...');
+      setUser(null);
+      setProfile(null);
+      setAuthError(null);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [clearSession]);
+  }, []);
 
   const value = {
     user,

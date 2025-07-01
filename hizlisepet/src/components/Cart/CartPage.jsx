@@ -23,79 +23,60 @@ import {
 } from '@mantine/core';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { notifications } from '@mantine/notifications';
 import { 
   IconShoppingCart, 
   IconTrash, 
   IconAlertCircle, 
   IconShoppingCartOff, 
   IconCheck, 
-  IconX 
+  IconX,
+  IconMinus,
+  IconPlus
 } from '@tabler/icons-react';
-import { Link } from 'react-router-dom';
-import { notifications } from '@mantine/notifications';
+
+// Fiyat formatı fonksiyonu
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('tr-TR', { 
+    style: 'currency', 
+    currency: 'TRY',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+};
 
 export function CartPage() {
-  const { cartItems, loading, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+  const { 
+    cartItems, 
+    loading: cartLoading, 
+    error: cartError,
+    removeFromCart, 
+    updateQuantity, 
+    getCartTotal, 
+    clearCart,
+    refetch: refetchCart
+  } = useCart();
   const [updating, setUpdating] = useState(false);
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
   const [clearModalOpen, setClearModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState(null);
   const navigate = useNavigate();
 
-  // Sepet öğeleri için form bilgilerini oluştur
-  const [formValues, setFormValues] = useState({});
-  
-  // Form değerlerini güncelle
-  useEffect(() => {
-    const newFormValues = {};
-    cartItems.forEach(item => {
-      newFormValues[item.id] = {
-        quantity: item.quantity
-      };
-    });
-    setFormValues(newFormValues);
-  }, [cartItems]);
-
   const handleQuantityChange = async (itemId, newQuantity) => {
-    if (isNaN(newQuantity)) {
-      notifications.show({
-        title: 'Hata',
-        message: 'Geçersiz miktar',
-        color: 'red'
-      });
-      return;
-    }
-    
-    if (newQuantity < 1) {
-      newQuantity = 1;
-    } else if (newQuantity > 99) {
-      newQuantity = 99;
-    }
-    
-    newQuantity = parseInt(newQuantity, 10);
+    if (newQuantity < 1) return;
     
     setUpdating(true);
-    console.log(`Miktar güncellenecek: ID=${itemId}, Yeni Miktar=${newQuantity}`);
     const success = await updateQuantity(itemId, newQuantity);
     setUpdating(false);
-    
-    if (success) {
-      notifications.show({
-        title: 'Başarılı',
-        message: 'Ürün miktarı güncellendi',
-        color: 'green'
-      });
-    } else {
+
+    if (!success) {
       notifications.show({
         title: 'Hata',
-        message: 'Miktar güncellenirken bir hata oluştu',
+        message: 'Ürün miktarı güncellenirken bir hata oluştu',
         color: 'red'
       });
     }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(price);
   };
 
   const openRemoveModal = (item) => {
@@ -103,19 +84,22 @@ export function CartPage() {
     setRemoveModalOpen(true);
   };
 
+  const openClearModal = () => {
+    setClearModalOpen(true);
+  };
+
   const handleRemoveItem = async () => {
     if (!itemToRemove) return;
     
     setRemoveModalOpen(false);
     setUpdating(true);
-    
     const success = await removeFromCart(itemToRemove.id);
     setUpdating(false);
-    
+
     if (success) {
       notifications.show({
         title: 'Başarılı',
-        message: `${itemToRemove.product?.name || 'Ürün'} sepetinizden çıkarıldı`,
+        message: 'Ürün sepetten çıkarıldı',
         color: 'green'
       });
     } else {
@@ -125,12 +109,6 @@ export function CartPage() {
         color: 'red'
       });
     }
-    
-    setItemToRemove(null);
-  };
-
-  const openClearModal = () => {
-    setClearModalOpen(true);
   };
 
   const handleClearCart = async () => {
@@ -154,10 +132,30 @@ export function CartPage() {
     }
   };
 
-  if (loading) {
+  if (cartLoading) {
+    return (
+      <Container size="xl" py="xl" style={{ position: 'relative', minHeight: '60vh' }}>
+        <LoadingOverlay visible={true} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
+      </Container>
+    );
+  }
+
+  if (cartError) {
     return (
       <Container size="xl" py="xl">
-        <LoadingOverlay visible={true} />
+        <Alert 
+          icon={<IconAlertCircle size={16} />} 
+          title="Bir hata oluştu" 
+          color="red"
+        >
+          {cartError}
+        </Alert>
+        <Button 
+          onClick={refetchCart}
+          mt="md"
+        >
+          Tekrar Dene
+        </Button>
       </Container>
     );
   }
@@ -190,191 +188,92 @@ export function CartPage() {
   }
 
   const cartTotal = getCartTotal();
-  const discountedTotal = cartTotal * 0.9; // %10 indirim (örnek)
+  const discountedTotal = cartTotal * 0.9; // %10 indirim
 
   return (
     <Container size="xl" py="xl" pos="relative">
-      <LoadingOverlay visible={updating} />
+      <LoadingOverlay visible={updating} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
       
       <Group justify="space-between" mb="lg">
         <Title order={1}>Sepetim</Title>
-        {cartItems.length > 0 && (
-          <Button 
-            variant="subtle" 
-            color="red" 
-            onClick={openClearModal}
-            leftSection={<IconTrash size={16} />}
-          >
-            Sepeti Temizle
-          </Button>
-        )}
+        <Button 
+          variant="subtle" 
+          color="red" 
+          onClick={openClearModal}
+          leftSection={<IconTrash size={16} />}
+        >
+          Sepeti Temizle
+        </Button>
       </Group>
 
       <Grid>
         {/* Sepet Ürünleri */}
         <Grid.Col span={{ base: 12, md: 8 }}>
-          <Paper p="md" withBorder>
+          <Stack spacing="md">
             {cartItems.map((item) => {
-              const product = item.product || item;
-              
-              // Miktar değeri doğrulanmış olmalı
-              if (formValues[item.id]?.quantity !== item.quantity) {
-                setFormValues(prev => ({
-                  ...prev,
-                  [item.id]: {
-                    ...prev[item.id],
-                    quantity: item.quantity
-                  }
-                }));
-              }
-              
+              const product = item.product;
+              if (!product) return null;
+
               return (
-                <Box key={item.id} mb="md">
-                  <Group justify="space-between" align="flex-start" wrap="nowrap">
-                    {/* Ürün Resmi */}
-                    <Image
-                      src={product.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
-                      width={100}
-                      height={100}
-                      fit="contain"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/product/${item.product_id}`)}
-                    />
-
-                    {/* Ürün Bilgileri */}
-                    <Box style={{ flex: 1 }}>
-                      <Text 
-                        fw={500} 
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/product/${item.product_id}`)}
-                      >
-                        {product.name}
-                      </Text>
-                      <Group spacing={5} mt={3}>
-                        {item.color && (
-                          <Badge color="blue" variant="light">
-                            Renk: {item.color}
-                          </Badge>
-                        )}
-                        {item.size && (
-                          <Badge color="teal" variant="light">
-                            Beden: {item.size}
-                          </Badge>
-                        )}
-                      </Group>
-                      <Group justify="space-between" mb="xs">
-                        <Text fw={500}>Fiyat:</Text>
-                        <Text>{formatPrice(product.price)}</Text>
-                      </Group>
-                      <Group justify="space-between" mb="xs">
-                        <Text fw={500}>Miktar:</Text>
-                        <Text>{item.quantity} adet</Text>
-                      </Group>
-                      <Group justify="space-between" mb="xs">
-                        <Text fw={500}>Toplam:</Text>
-                        <Text fw={600} c="blue">
-                          {formatPrice(product.price * item.quantity)}
+                <Paper key={item.id} p="md" withBorder>
+                  <Group position="apart" align="flex-start">
+                    <Group align="flex-start" spacing="lg" style={{ flex: 1 }}>
+                      <Image
+                        src={product.image_url}
+                        width={120}
+                        height={120}
+                        radius="md"
+                        alt={product.name}
+                      />
+                      <Box style={{ flex: 1 }}>
+                        <Text size="lg" fw={500} mb="xs" lineClamp={2}>
+                          {product.name}
                         </Text>
-                      </Group>
-                    </Box>
-
-                    {/* Miktar Ayarı */}
-                    <Group>
-                      <Group spacing={5}>
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          disabled={item.quantity <= 1 || updating}
-                          onClick={() => {
-                            const newQuantity = Math.max(1, formValues[item.id]?.quantity - 1 || item.quantity - 1);
-                            // Form değerini güncelle
-                            setFormValues(prev => ({
-                              ...prev,
-                              [item.id]: {
-                                ...prev[item.id],
-                                quantity: newQuantity
-                              }
-                            }));
-                            // Sepet miktarını güncelle
-                            handleQuantityChange(item.id, newQuantity);
-                          }}
-                        >
-                          -
-                        </ActionIcon>
-                        <NumberInput
-                          min={1}
-                          max={99}
-                          size="xs"
-                          w={50}
-                          hideControls
-                          disabled={updating}
-                          styles={{ input: { textAlign: 'center' } }}
-                          onChange={(val) => {
-                            // Form değerlerini güncelle
-                            setFormValues(prev => ({
-                              ...prev,
-                              [item.id]: {
-                                ...prev[item.id],
-                                quantity: val
-                              }
-                            }));
-                          }}
-                          onBlur={() => {
-                            const newQuantity = formValues[item.id]?.quantity;
-                            // Miktarı doğrula ve güncelle
-                            if (newQuantity !== undefined && newQuantity !== item.quantity) {
-                              if (newQuantity >= 1 && newQuantity <= 99) {
-                                handleQuantityChange(item.id, newQuantity);
-                              } else {
-                                // Miktar geçersizse, önceki miktarı geri yükle
-                                setFormValues(prev => ({
-                                  ...prev,
-                                  [item.id]: {
-                                    ...prev[item.id],
-                                    quantity: item.quantity
-                                  }
-                                }));
-                              }
-                            }
-                          }}
-                          value={formValues[item.id]?.quantity || item.quantity}
-                        />
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          disabled={item.quantity >= 99 || updating}
-                          onClick={() => {
-                            const newQuantity = Math.min(99, formValues[item.id]?.quantity + 1 || item.quantity + 1);
-                            // Form değerini güncelle
-                            setFormValues(prev => ({
-                              ...prev,
-                              [item.id]: {
-                                ...prev[item.id],
-                                quantity: newQuantity
-                              }
-                            }));
-                            // Sepet miktarını güncelle
-                            handleQuantityChange(item.id, newQuantity);
-                          }}
-                        >
-                          +
-                        </ActionIcon>
-                      </Group>
-                      <ActionIcon 
-                        color="red" 
-                        variant="light"
-                        onClick={() => openRemoveModal(item)}
-                        disabled={updating}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
+                        <Group spacing="xs" mb="sm">
+                          <Badge color="blue" variant="light">
+                            {product.category}
+                          </Badge>
+                          <Badge color="gray" variant="outline">
+                            {product.brand}
+                          </Badge>
+                        </Group>
+                        <Group spacing="xl">
+                          <Group spacing="xs">
+                            <ActionIcon
+                              variant="light"
+                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                            >
+                              <IconMinus size={16} />
+                            </ActionIcon>
+                            <Text fw={500} w={40} ta="center">
+                              {item.quantity}
+                            </Text>
+                            <ActionIcon
+                              variant="light"
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            >
+                              <IconPlus size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Text fw={700} size="lg" c="blue">
+                            {formatPrice(item.price * item.quantity)}
+                          </Text>
+                        </Group>
+                      </Box>
                     </Group>
+                    <ActionIcon
+                      color="red"
+                      variant="light"
+                      onClick={() => openRemoveModal(item)}
+                    >
+                      <IconTrash size={18} />
+                    </ActionIcon>
                   </Group>
-                  <Divider my="md" />
-                </Box>
+                </Paper>
               );
             })}
-          </Paper>
+          </Stack>
         </Grid.Col>
 
         {/* Sipariş Özeti */}

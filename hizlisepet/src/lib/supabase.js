@@ -167,13 +167,26 @@ export async function getProductsByCategory(category, subcategory = null) {
 
 // Ürün arama fonksiyonu
 export async function searchProducts(searchTerm) {
+  if (!searchTerm) return [];
+
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .ilike('name', `%${searchTerm}%`);
+    .or(
+      `name.ilike.%${searchTerm}%,` +
+      `brand.ilike.%${searchTerm}%,` +
+      `category.ilike.%${searchTerm}%,` +
+      `subcategory.ilike.%${searchTerm}%`
+    )
+    .order('name')
+    .limit(10);
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('Arama hatası:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 // UYARI: Sadece geliştirme ortamında kullanın!

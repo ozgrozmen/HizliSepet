@@ -10,7 +10,8 @@ import {
   Loader, 
   Center,
   Stack,
-  Alert
+  Alert,
+  LoadingOverlay
 } from '@mantine/core';
 import { ProductCard } from '../Product/ProductCard';
 import { useFavorite } from '../../context/FavoriteContext';
@@ -20,7 +21,7 @@ import { supabase } from '../../lib/supabase';
 import { IconMoodSad, IconInfoCircle, IconAlertCircle } from '@tabler/icons-react';
 
 export function FavoritesPage() {
-  const { favorites } = useFavorite();
+  const { favorites, loading: favoritesLoading, error: favoritesError } = useFavorite();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
@@ -28,39 +29,28 @@ export function FavoritesPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (authLoading) {
-      console.log('Oturum yükleniyor, bekliyor...');
+    if (authLoading || favoritesLoading) {
       return;
     }
 
     if (!user) {
-      console.log('Kullanıcı giriş yapmamış, yönlendiriliyor...');
       navigate('/login', { state: { returnUrl: '/favorites' } });
       return;
     }
 
-    console.log('Kullanıcı giriş yapmış:', user.email);
-    console.log('Favoriler:', favorites);
-    
     fetchFavoriteProducts();
-  }, [user, favorites, authLoading, navigate]);
+  }, [user, favorites, authLoading, favoritesLoading, navigate]);
 
   const fetchFavoriteProducts = async () => {
     try {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      if (!favorites || favorites.length === 0) {
-        console.log('Favori ürün bulunmuyor');
+      if (!user || !favorites || favorites.length === 0) {
         setFavoriteProducts([]);
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      console.log('Favori ürünler getiriliyor:', favorites);
+      setError(null);
       
       const { data, error } = await supabase
         .from('products')
@@ -69,30 +59,25 @@ export function FavoritesPage() {
 
       if (error) {
         console.error('Favori ürünler çekilirken hata:', error.message);
-        setError(`Favoriler yüklenirken hata oluştu: ${error.message}`);
-        setLoading(false);
+        setError('Favori ürünler yüklenirken bir hata oluştu');
+        setFavoriteProducts([]);
         return;
       }
 
-      console.log('Favori ürünler yüklendi:', data?.length || 0);
       setFavoriteProducts(data || []);
-      setLoading(false);
     } catch (err) {
       console.error('Beklenmeyen bir hata oluştu:', err.message);
-      setError(`Beklenmeyen bir hata oluştu: ${err.message}`);
+      setError('Beklenmeyen bir hata oluştu');
+      setFavoriteProducts([]);
+    } finally {
       setLoading(false);
     }
   };
 
-  if (authLoading) {
+  if (authLoading || favoritesLoading) {
     return (
-      <Container size="xl" py="xl">
-        <Center style={{ height: '60vh' }}>
-          <Stack align="center" spacing="md">
-            <Loader size="lg" />
-            <Text>Oturum kontrol ediliyor...</Text>
-          </Stack>
-        </Center>
+      <Container size="xl" py="xl" style={{ position: 'relative', minHeight: '60vh' }}>
+        <LoadingOverlay visible={true} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
       </Container>
     );
   }
@@ -113,15 +98,13 @@ export function FavoritesPage() {
 
   if (loading) {
     return (
-      <Container size="xl" py="xl">
-        <Center style={{ height: '60vh' }}>
-          <Loader size="lg" />
-        </Center>
+      <Container size="xl" py="xl" style={{ position: 'relative', minHeight: '60vh' }}>
+        <LoadingOverlay visible={true} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
       </Container>
     );
   }
 
-  if (error) {
+  if (error || favoritesError) {
     return (
       <Container size="xl" py="xl">
         <Alert 
@@ -129,7 +112,7 @@ export function FavoritesPage() {
           title="Bir hata oluştu" 
           color="red"
         >
-          {error}
+          {error || favoritesError}
         </Alert>
         <Button 
           onClick={() => {

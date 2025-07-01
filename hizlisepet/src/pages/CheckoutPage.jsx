@@ -22,7 +22,9 @@ import {
   RadioGroup,
   Stack,
   Center,
-  Modal
+  Modal,
+  Badge,
+  ThemeIcon
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -36,7 +38,16 @@ import {
   IconCheck,
   IconAlertCircle, 
   IconTruck,
-  IconHome2
+  IconHome2,
+  IconUser,
+  IconPhone,
+  IconHome,
+  IconMailbox,
+  IconArrowRight,
+  IconArrowLeft,
+  IconCash,
+  IconLock,
+  IconPackage
 } from '@tabler/icons-react';
 
 export function CheckoutPage() {
@@ -341,303 +352,441 @@ export function CheckoutPage() {
         />
       </Stepper>
       
-      <Paper p="md" withBorder radius="md" mb="xl">
+      <Paper shadow="sm" p="xl" radius="md" bg="gray.0">
+        {/* Teslimat Bilgileri Adımı */}
         {activeStep === 0 && (
           <>
-            <Title order={3} mb="md">Teslimat Bilgileri</Title>
+            <Title order={3} mb="xl" c="blue.7">
+              <Group>
+                <ThemeIcon size={40} radius="md" color="blue" variant="light">
+                  <IconTruck size={22} />
+                </ThemeIcon>
+                <Text>Teslimat Bilgileri</Text>
+              </Group>
+            </Title>
+            
+            <Paper p="xl" radius="md" bg="white" mb="xl">
+              <Grid gutter="xl">
+                <Grid.Col span={12}>
+                  <Card withBorder p="md" radius="md" mb="xl">
+                    <Card.Section bg="blue.0" p="sm">
+                      <Group>
+                        <ThemeIcon size={32} radius="xl" color="blue" variant="light">
+                          <IconUser size={18} />
+                        </ThemeIcon>
+                        <Text fw={500}>Kişisel Bilgiler</Text>
+                      </Group>
+                    </Card.Section>
+                    <Box pt="md">
+                      <Grid gutter="md">
+                        <Grid.Col span={{ base: 12, md: 6 }}>
+                          <TextInput
+                            label="Ad Soyad"
+                            placeholder="Ad Soyad giriniz"
+                            value={shippingForm.fullName}
+                            onChange={(e) => handleShippingFormChange('fullName', e.target.value)}
+                            required
+                            size="md"
+                            leftSection={<IconUser size={16} />}
+                          />
+                        </Grid.Col>
+                        <Grid.Col span={{ base: 12, md: 6 }}>
+                          <TextInput
+                            label="Telefon"
+                            placeholder="05XX XXX XX XX"
+                            value={shippingForm.phone}
+                            onChange={(e) => handleShippingFormChange('phone', e.target.value)}
+                            required
+                            size="md"
+                            leftSection={<IconPhone size={16} />}
+                          />
+                        </Grid.Col>
+                      </Grid>
+                    </Box>
+                  </Card>
+                </Grid.Col>
+                
+                <Grid.Col span={12}>
+                  <Card withBorder p="md" radius="md">
+                    <Card.Section bg="blue.0" p="sm">
+                      <Group>
+                        <ThemeIcon size={32} radius="xl" color="blue" variant="light">
+                          <IconHome2 size={18} />
+                        </ThemeIcon>
+                        <Text fw={500}>Adres Bilgileri</Text>
+                      </Group>
+                    </Card.Section>
+                    <Box pt="md">
+                      <Grid gutter="md">
+                        <Grid.Col span={12}>
+                          <Textarea
+                            label="Adres"
+                            placeholder="Detaylı adres bilgisi giriniz"
+                            value={shippingForm.address}
+                            onChange={(e) => handleShippingFormChange('address', e.target.value)}
+                            required
+                            minRows={3}
+                            size="md"
+                            leftSection={<IconHome size={16} />}
+                            mb="md"
+                          />
+                        </Grid.Col>
+                        
+                        <Grid.Col span={{ base: 12, md: 4 }}>
+                          <Select
+                            label="İl"
+                            placeholder="İl seçiniz"
+                            value={shippingForm.city}
+                            onChange={(value) => handleShippingFormChange('city', value)}
+                            data={['İstanbul', 'Ankara', 'İzmir']} // Örnek veri
+                            required
+                            size="md"
+                            leftSection={<IconMapPin size={16} />}
+                            searchable
+                          />
+                        </Grid.Col>
+                        
+                        <Grid.Col span={{ base: 12, md: 4 }}>
+                          <Select
+                            label="İlçe"
+                            placeholder="İlçe seçiniz"
+                            value={shippingForm.district}
+                            onChange={(value) => handleShippingFormChange('district', value)}
+                            data={['Kadıköy', 'Beşiktaş', 'Üsküdar']} // Örnek veri
+                            required
+                            size="md"
+                            leftSection={<IconMapPin size={16} />}
+                            searchable
+                          />
+                        </Grid.Col>
+                        
+                        <Grid.Col span={{ base: 12, md: 4 }}>
+                          <TextInput
+                            label="Posta Kodu"
+                            placeholder="34XXX"
+                            value={shippingForm.postalCode}
+                            onChange={(e) => handleShippingFormChange('postalCode', e.target.value)}
+                            required
+                            size="md"
+                            leftSection={<IconMailbox size={16} />}
+                          />
+                        </Grid.Col>
+                      </Grid>
+                    </Box>
+                  </Card>
+                </Grid.Col>
+              </Grid>
+            </Paper>
+            
+            <Group justify="flex-end" mt="xl">
+              <Button 
+                color="blue" 
+                onClick={handleNextStep}
+                rightSection={<IconArrowRight size={16} />}
+                size="md"
+                radius="xl"
+              >
+                Devam Et
+              </Button>
+            </Group>
+          </>
+        )}
+
+        {/* Ödeme Bilgileri Adımı */}
+        {activeStep === 1 && (
+          <>
+            <Title order={3} mb="xl" c="blue.7">
+              <Group>
+                <ThemeIcon size={40} radius="md" color="blue" variant="light">
+                  <IconCreditCard size={22} />
+                </ThemeIcon>
+                <Text>Ödeme Bilgileri</Text>
+              </Group>
+            </Title>
+            
+            <Paper p="xl" radius="md" bg="white" mb="xl">
+              <Card withBorder p="md" radius="md" mb="xl">
+                <Card.Section bg="blue.0" p="sm">
+                  <Group>
+                    <ThemeIcon size={32} radius="xl" color="blue" variant="light">
+                      <IconCreditCard size={18} />
+                    </ThemeIcon>
+                    <Text fw={500}>Ödeme Yöntemi</Text>
+                  </Group>
+                </Card.Section>
+                <Box pt="md">
+                  <RadioGroup
+                    value={paymentForm.paymentMethod}
+                    onChange={(value) => {
+                      handlePaymentFormChange('paymentMethod', value);
+                      setShowCardForm(value === 'credit_card');
+                    }}
+                  >
+                    <Stack>
+                      <Paper withBorder p="md" radius="md">
+                        <Radio
+                          value="credit_card"
+                          label={
+                            <Group>
+                              <ThemeIcon size={32} radius="xl" color="blue" variant="light">
+                                <IconCreditCard size={18} />
+                              </ThemeIcon>
+                              <Box>
+                                <Text fw={500}>Kredi/Banka Kartı</Text>
+                                <Text size="sm" c="dimmed">Güvenli ödeme ile anında işlem</Text>
+                              </Box>
+                            </Group>
+                          }
+                        />
+                      </Paper>
+                      <Paper withBorder p="md" radius="md">
+                        <Radio
+                          value="cash_on_delivery"
+                          label={
+                            <Group>
+                              <ThemeIcon size={32} radius="xl" color="green" variant="light">
+                                <IconCash size={18} />
+                              </ThemeIcon>
+                              <Box>
+                                <Text fw={500}>Kapıda Ödeme</Text>
+                                <Text size="sm" c="dimmed">Teslimat sırasında ödeme (+15,00 TL)</Text>
+                              </Box>
+                            </Group>
+                          }
+                        />
+                      </Paper>
+                    </Stack>
+                  </RadioGroup>
+                </Box>
+              </Card>
+
+              {showCardForm && (
+                <Card withBorder p="md" radius="md">
+                  <Card.Section bg="blue.0" p="sm">
+                    <Group>
+                      <ThemeIcon size={32} radius="xl" color="blue" variant="light">
+                        <IconCreditCard size={18} />
+                      </ThemeIcon>
+                      <Text fw={500}>Kart Bilgileri</Text>
+                    </Group>
+                  </Card.Section>
+                  <Box pt="md">
+                    <Grid>
+                      <Grid.Col span={12}>
+                        <TextInput
+                          label="Kart Üzerindeki İsim"
+                          placeholder="Kart üzerindeki ismi giriniz"
+                          value={paymentForm.cardHolder}
+                          onChange={(e) => handlePaymentFormChange('cardHolder', e.target.value)}
+                          required
+                          mb="md"
+                          leftSection={<IconUser size={16} />}
+                        />
+                      </Grid.Col>
+                      
+                      <Grid.Col span={12}>
+                        <TextInput
+                          label="Kart Numarası"
+                          placeholder="XXXX XXXX XXXX XXXX"
+                          value={paymentForm.cardNumber}
+                          onChange={(e) => handlePaymentFormChange('cardNumber', e.target.value)}
+                          required
+                          mb="md"
+                          leftSection={<IconCreditCard size={16} />}
+                        />
+                      </Grid.Col>
+                      
+                      <Grid.Col span={6}>
+                        <Group grow>
+                          <Select
+                            label="Son Kullanma Ay"
+                            placeholder="Ay"
+                            value={paymentForm.expireMonth}
+                            onChange={(value) => handlePaymentFormChange('expireMonth', value)}
+                            data={Array.from({length: 12}, (_, i) => ({
+                              value: String(i + 1).padStart(2, '0'),
+                              label: String(i + 1).padStart(2, '0')
+                            }))}
+                            required
+                            mb="md"
+                          />
+                          <Select
+                            label="Son Kullanma Yıl"
+                            placeholder="Yıl"
+                            value={paymentForm.expireYear}
+                            onChange={(value) => handlePaymentFormChange('expireYear', value)}
+                            data={Array.from({length: 10}, (_, i) => String(new Date().getFullYear() + i))}
+                            required
+                            mb="md"
+                          />
+                        </Group>
+                      </Grid.Col>
+                      
+                      <Grid.Col span={6}>
+                        <TextInput
+                          label="CVV"
+                          placeholder="XXX"
+                          value={paymentForm.cvv}
+                          onChange={(e) => handlePaymentFormChange('cvv', e.target.value)}
+                          required
+                          mb="md"
+                          leftSection={<IconLock size={16} />}
+                        />
+                      </Grid.Col>
+                    </Grid>
+                  </Box>
+                </Card>
+              )}
+            </Paper>
+
+            <Group justify="space-between" mt="xl">
+              <Button 
+                variant="outline" 
+                onClick={handlePreviousStep}
+                leftSection={<IconArrowLeft size={16} />}
+                size="md"
+                radius="xl"
+              >
+                Geri
+              </Button>
+              <Button 
+                color="blue" 
+                onClick={handleNextStep}
+                rightSection={<IconArrowRight size={16} />}
+                size="md"
+                radius="xl"
+              >
+                Devam Et
+              </Button>
+            </Group>
+          </>
+        )}
+
+        {/* Onay Adımı */}
+        {activeStep === 2 && (
+          <>
+            <Title order={3} mb="xl" c="blue.7">Sipariş Özeti</Title>
             
             <Grid>
               <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  label="Ad Soyad"
-                  placeholder="Ad Soyad"
-                  value={shippingForm.fullName}
-                  onChange={(e) => handleShippingFormChange('fullName', e.target.value)}
-                  required
-                  mb="md"
-                />
+                <Card withBorder shadow="sm" radius="md" mb="lg">
+                  <Title order={5} mb="md" c="blue.7">
+                    <Group>
+                      <IconHome2 size={20} />
+                      <Text>Teslimat Adresi</Text>
+                    </Group>
+                  </Title>
+                  <Box p="md" bg="gray.0" radius="md">
+                    <Text fw={500} mb="xs">{shippingForm.fullName}</Text>
+                    <Text size="sm" mb="xs">{shippingForm.address}</Text>
+                    <Text size="sm" mb="xs">{shippingForm.district}/{shippingForm.city} {shippingForm.postalCode}</Text>
+                    <Text size="sm" c="dimmed">Tel: {shippingForm.phone}</Text>
+                  </Box>
+                </Card>
+
+                <Card withBorder shadow="sm" radius="md" mb="lg">
+                  <Title order={5} mb="md" c="blue.7">
+                    <Group>
+                      <IconCreditCard size={20} />
+                      <Text>Ödeme Bilgileri</Text>
+                    </Group>
+                  </Title>
+                  <Box p="md" bg="gray.0" radius="md">
+                    <Text>
+                      {paymentForm.paymentMethod === 'credit_card' 
+                        ? (
+                          <Group>
+                            <IconCreditCard size={18} />
+                            <Text>Kredi Kartı (**** **** **** {paymentForm.cardNumber.slice(-4)})</Text>
+                          </Group>
+                        ) 
+                        : (
+                          <Group>
+                            <IconCash size={18} />
+                            <Text>Kapıda Ödeme</Text>
+                          </Group>
+                        )
+                      }
+                    </Text>
+                  </Box>
+                </Card>
               </Grid.Col>
-              
+
               <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
-                  label="Telefon"
-                  placeholder="0(5XX) XXX XX XX"
-                  value={shippingForm.phone}
-                  onChange={(e) => handleShippingFormChange('phone', e.target.value)}
-                  required
-                  mb="md"
-                />
-              </Grid.Col>
-              
-              <Grid.Col span={12}>
-                <Textarea
-                  label="Adres"
-                  placeholder="Adres"
-                  value={shippingForm.address}
-                  onChange={(e) => handleShippingFormChange('address', e.target.value)}
-                  required
-                  mb="md"
-                  minRows={3}
-                />
-              </Grid.Col>
-              
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <TextInput
-                  label="Şehir"
-                  placeholder="Şehir"
-                  value={shippingForm.city}
-                  onChange={(e) => handleShippingFormChange('city', e.target.value)}
-                  required
-                  mb="md"
-                />
-              </Grid.Col>
-              
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <TextInput
-                  label="İlçe"
-                  placeholder="İlçe"
-                  value={shippingForm.district}
-                  onChange={(e) => handleShippingFormChange('district', e.target.value)}
-                  required
-                  mb="md"
-                />
-              </Grid.Col>
-              
-              <Grid.Col span={{ base: 12, md: 4 }}>
-                <TextInput
-                  label="Posta Kodu"
-                  placeholder="Posta Kodu"
-                  value={shippingForm.postalCode}
-                  onChange={(e) => handleShippingFormChange('postalCode', e.target.value)}
-                  mb="md"
-                />
+                <Card withBorder shadow="sm" radius="md" p="xl">
+                  <Title order={5} mb="lg" c="blue.7">Sipariş Detayı</Title>
+                  
+                  {cartItems.map((item, index) => (
+                    <Box key={index} mb="md">
+                      <Group>
+                        <Image
+                          src={item.product?.image_url}
+                          width={60}
+                          height={60}
+                          radius="md"
+                        />
+                        <Box>
+                          <Text fw={500}>{item.product?.name}</Text>
+                          <Text size="sm" c="dimmed">Adet: {item.quantity}</Text>
+                          <Text size="sm">{formatPrice(item.product?.price * item.quantity)}</Text>
+                        </Box>
+                      </Group>
+                      {index !== cartItems.length - 1 && <Divider my="md" />}
+                    </Box>
+                  ))}
+
+                  <Divider my="lg" />
+                  
+                  <Stack spacing="xs">
+                    <Group justify="space-between">
+                      <Text c="dimmed">Ürünler Toplamı:</Text>
+                      <Text>{formatPrice(totalAmount)}</Text>
+                    </Group>
+                    
+                    <Group justify="space-between">
+                      <Text c="green">İndirim:</Text>
+                      <Text c="green">-{formatPrice(totalAmount - discountedTotal)}</Text>
+                    </Group>
+                    
+                    <Group justify="space-between">
+                      <Text c="dimmed">Kargo:</Text>
+                      <Badge color="green" variant="light">Ücretsiz</Badge>
+                    </Group>
+                    
+                    {paymentForm.paymentMethod === 'cash_on_delivery' && (
+                      <Group justify="space-between">
+                        <Text c="dimmed">Kapıda Ödeme Ücreti:</Text>
+                        <Text>+15,00 TL</Text>
+                      </Group>
+                    )}
+                    
+                    <Divider my="sm" />
+                    
+                    <Group justify="space-between">
+                      <Text fw={700} size="lg">Toplam:</Text>
+                      <Text fw={700} size="xl" c="blue.7">
+                        {formatPrice(discountedTotal + (paymentForm.paymentMethod === 'cash_on_delivery' ? 15 : 0))}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Card>
               </Grid.Col>
             </Grid>
-            
-            <Group justify="flex-end" mt="xl">
-              <Button
-                onClick={handleNextStep}
-                rightSection={<IconTruck size={16} />}
-              >
-                Devam Et
-              </Button>
-            </Group>
-          </>
-        )}
-        
-        {activeStep === 1 && (
-          <>
-            <Title order={3} mb="md">Ödeme Bilgileri</Title>
-            
-            <Radio.Group
-              label="Ödeme Yöntemi"
-              value={paymentForm.paymentMethod}
-              onChange={handlePaymentMethodChange}
-              mb="lg"
-            >
-              <Group mt="xs">
-                <Radio value="credit_card" label="Kredi Kartı" />
-                <Radio value="cash_on_delivery" label="Kapıda Ödeme" />
-              </Group>
-            </Radio.Group>
-            
-            {showCardForm && (
-              <Grid>
-                <Grid.Col span={12}>
-                  <TextInput
-                    label="Kart Üzerindeki İsim"
-                    placeholder="Kart Üzerindeki İsim"
-                    value={paymentForm.cardHolder}
-                    onChange={(e) => handlePaymentFormChange('cardHolder', e.target.value)}
-                    required
-                    mb="md"
-                  />
-                </Grid.Col>
-                
-                <Grid.Col span={12}>
-                  <TextInput
-                    label="Kart Numarası"
-                    placeholder="XXXX XXXX XXXX XXXX"
-                    value={paymentForm.cardNumber}
-                    onChange={(e) => handlePaymentFormChange('cardNumber', e.target.value.replace(/\D/g, '').substring(0, 16))}
-                    required
-                    mb="md"
-                  />
-                </Grid.Col>
-                
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <Select
-                    label="Son Kullanma Ayı"
-                    placeholder="Ay"
-                    value={paymentForm.expireMonth}
-                    onChange={(value) => handlePaymentFormChange('expireMonth', value)}
-                    data={[
-                      { value: '01', label: '01' },
-                      { value: '02', label: '02' },
-                      { value: '03', label: '03' },
-                      { value: '04', label: '04' },
-                      { value: '05', label: '05' },
-                      { value: '06', label: '06' },
-                      { value: '07', label: '07' },
-                      { value: '08', label: '08' },
-                      { value: '09', label: '09' },
-                      { value: '10', label: '10' },
-                      { value: '11', label: '11' },
-                      { value: '12', label: '12' }
-                    ]}
-                    required
-                    mb="md"
-                  />
-                </Grid.Col>
-                
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <Select
-                    label="Son Kullanma Yılı"
-                    placeholder="Yıl"
-                    value={paymentForm.expireYear}
-                    onChange={(value) => handlePaymentFormChange('expireYear', value)}
-                    data={Array.from({ length: 10 }, (_, i) => {
-                      const year = (new Date().getFullYear() + i).toString();
-                      return { value: year, label: year };
-                    })}
-                    required
-                    mb="md"
-                  />
-                </Grid.Col>
-                
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                  <TextInput
-                    label="CVV"
-                    placeholder="XXX"
-                    value={paymentForm.cvv}
-                    onChange={(e) => handlePaymentFormChange('cvv', e.target.value.replace(/\D/g, '').substring(0, 3))}
-                    required
-                    mb="md"
-                  />
-                </Grid.Col>
-              </Grid>
-            )}
-            
-            {!showCardForm && (
-              <Alert
-                icon={<IconAlertCircle size={16} />}
-                title="Kapıda Ödeme"
-                color="blue"
-                variant="light"
-                mb="md"
-              >
-                Siparişiniz, belirttiğiniz adrese teslim edildiğinde kapıda ödeme yapabilirsiniz.
-                Kapıda ödeme ek ücreti: 15 TL
-              </Alert>
-            )}
-            
+
             <Group justify="space-between" mt="xl">
-              <Button variant="outline" onClick={handlePreviousStep}>
-                Geri
-              </Button>
-              <Button onClick={handleNextStep}>
-                Devam Et
-              </Button>
-            </Group>
-          </>
-        )}
-        
-        {activeStep === 2 && (
-          <>
-            <Title order={3} mb="md">Sipariş Özeti</Title>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Teslimat Adresi</Title>
-              <Card withBorder p="sm">
-                <Group align="flex-start" mb="xs">
-                  <IconHome2 size={18} />
-                  <Box>
-                    <Text fw={500}>{shippingForm.fullName}</Text>
-                    <Text size="sm">{shippingForm.address}</Text>
-                    <Text size="sm">{shippingForm.district}/{shippingForm.city} {shippingForm.postalCode}</Text>
-                    <Text size="sm">Tel: {shippingForm.phone}</Text>
-                  </Box>
-                </Group>
-              </Card>
-            </Box>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Ödeme Bilgileri</Title>
-              <Card withBorder p="sm">
-                <Text>
-                  {paymentForm.paymentMethod === 'credit_card' 
-                    ? `Kredi Kartı (${paymentForm.cardNumber.slice(-4)})` 
-                    : 'Kapıda Ödeme'}
-                </Text>
-              </Card>
-            </Box>
-            
-            <Box mb="lg">
-              <Title order={5} mb="sm">Sipariş Öğeleri</Title>
-              {cartItems.map((item) => (
-                <Card key={item.id} withBorder p="sm" mb="sm">
-                  <Group>
-                    <Image
-                      src={item.product.image_url || 'https://placehold.co/300x300?text=Ürün+Görseli'}
-                      width={60}
-                      height={60}
-                      fit="contain"
-                    />
-                    <Box style={{ flex: 1 }}>
-                      <Group position="apart">
-                        <Text fw={500}>{item.product.name}</Text>
-                        <Text fw={500}>{formatPrice((item.price || item.product.price) * item.quantity)}</Text>
-                      </Group>
-                      <Text size="sm" c="dimmed">Miktar: {item.quantity}</Text>
-                    </Box>
-                  </Group>
-                </Card>
-              ))}
-            </Box>
-            
-            <Box>
-              <Card withBorder p="md">
-                <Group justify="space-between" mb="xs">
-                  <Text>Ürünler Toplamı:</Text>
-                  <Text>{formatPrice(totalAmount)}</Text>
-                </Group>
-                
-                <Group justify="space-between" mb="xs">
-                  <Text>İndirim:</Text>
-                  <Text c="green">-{formatPrice(totalAmount - discountedTotal)}</Text>
-                </Group>
-                
-                <Group justify="space-between" mb="xs">
-                  <Text>Kargo:</Text>
-                  <Text>Ücretsiz</Text>
-                </Group>
-                
-                {paymentForm.paymentMethod === 'cash_on_delivery' && (
-                  <Group justify="space-between" mb="xs">
-                    <Text>Kapıda Ödeme Ücreti:</Text>
-                    <Text>+15,00 TL</Text>
-                  </Group>
-                )}
-                
-                <Divider my="sm" />
-                
-                <Group justify="space-between">
-                  <Text fw={700} size="lg">Toplam:</Text>
-                  <Text fw={700} size="lg" c="blue">
-                    {formatPrice(discountedTotal + (paymentForm.paymentMethod === 'cash_on_delivery' ? 15 : 0))}
-                  </Text>
-                </Group>
-              </Card>
-            </Box>
-            
-            <Group justify="space-between" mt="xl">
-              <Button variant="outline" onClick={handlePreviousStep}>
+              <Button 
+                variant="outline" 
+                onClick={handlePreviousStep}
+                leftSection={<IconArrowLeft size={16} />}
+                size="md"
+              >
                 Geri
               </Button>
               <Button 
                 color="green" 
                 onClick={handleCompleteOrder}
                 leftSection={<IconShoppingCart size={16} />}
+                size="md"
               >
                 Siparişi Tamamla
               </Button>
@@ -650,26 +799,33 @@ export function CheckoutPage() {
       <Modal
         opened={successModalOpen}
         onClose={() => navigate('/orders')}
-        title="Siparişiniz Alındı"
+        title={<Text size="xl" fw={700} c="green.7">Siparişiniz Alındı</Text>}
         centered
         size="md"
         closeOnClickOutside={false}
         closeOnEscape={false}
         withCloseButton={false}
       >
-        <Box ta="center" py="md">
-          <IconCheck size={50} color="green" />
-          <Title order={3} mt="md">Siparişiniz Başarıyla Alındı!</Title>
-          <Text mt="sm">
-            Sipariş numaranız: <Text span fw={700}>{newOrderId?.substring(0, 8)}</Text>
+        <Box ta="center" py="xl">
+          <ThemeIcon size={80} radius={40} color="green">
+            <IconCheck size={40} />
+          </ThemeIcon>
+          
+          <Title order={3} mt="xl" c="green.7">Siparişiniz Başarıyla Alındı!</Title>
+          
+          <Text mt="md" size="lg">
+            Sipariş numaranız: <Badge size="lg" variant="dot">{newOrderId?.substring(0, 8)}</Badge>
           </Text>
-          <Text mt="sm" mb="lg">
+          
+          <Text mt="md" mb="xl" c="dimmed">
             Siparişinizin durumunu &quot;Siparişlerim&quot; sayfasından takip edebilirsiniz.
           </Text>
           
           <Button 
             onClick={() => navigate('/orders')}
             fullWidth
+            size="lg"
+            leftSection={<IconPackage size={20} />}
           >
             Siparişlerime Git
           </Button>
