@@ -37,18 +37,20 @@ import {
 } from '@tabler/icons-react';
 import { supabase } from '../../lib/supabase';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState('Siyah');
   const [selectedSize, setSelectedSize] = useState('M');
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -56,6 +58,9 @@ export function ProductDetail() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [userReview, setUserReview] = useState(null);
 
   // Değerlendirmeler ve özellikler için başlangıçta gösterilecek miktar
   const initialReviewsToShow = 2;
@@ -80,25 +85,25 @@ export function ProductDetail() {
     { size: 'XXL', chest: '102-105', waist: '83-86', hip: '109-112' }
   ];
 
-  const reviews = [
-    {
-      id: 1,
-      user: 'Ahmet Y.',
-      rating: 5,
-      comment: 'Ürün kalitesi çok iyi, tam beklediğim gibi.',
-      date: '2024-01-15'
-    },
-    {
-      id: 2,
-      user: 'Ayşe K.',
-      rating: 4,
-      comment: 'Güzel ürün, kargo hızlıydı.',
-      date: '2024-01-14'
-    }
+  const clothingCategories = [
+    'Giyim',
+    'Elbise',
+    'Tişört',
+    'Pantolon',
+    'Gömlek',
+    'Ceket',
+    'Kazak',
+    'Mont',
+    'Şort',
+    'İç Giyim',
+    'Pijama',
+    'Eşofman',
+    'Takım Elbise'
   ];
 
   useEffect(() => {
     fetchProduct();
+    fetchReviews();
   }, [productId]);
 
   const fetchProduct = async () => {
@@ -129,17 +134,106 @@ export function ProductDetail() {
     }
   };
 
+  const fetchReviews = async () => {
+    try {
+      // Yorumları getir
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('product_reviews_with_users')
+        .select('*')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false });
+
+      if (reviewsError) {
+        console.error('Yorum verisi çekilirken hata:', reviewsError);
+        return;
+      }
+
+      // İstatistikleri hesapla
+      const stats = {
+        total_reviews: reviewsData?.length || 0,
+        average_rating: reviewsData?.length 
+          ? Number((reviewsData.reduce((acc, review) => acc + review.rating, 0) / reviewsData.length).toFixed(1))
+          : 0,
+        rating_distribution: reviewsData?.reduce((acc, review) => {
+          acc[review.rating] = (acc[review.rating] || 0) + 1;
+          return acc;
+        }, { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 })
+      };
+
+      // Eğer kullanıcı giriş yapmışsa, kendi yorumunu kontrol et
+      let userReviewData = null;
+      if (user) {
+        userReviewData = reviewsData?.find(review => review.user_id === user.id);
+        if (userReviewData) {
+          setUserReview(userReviewData);
+          setRating(userReviewData.rating);
+          setComment(userReviewData.comment);
+        }
+      }
+
+      setReviews(reviewsData || []);
+      setReviewStats(stats);
+
+    } catch (error) {
+      console.error('Yorumlar yüklenirken hata:', error);
+    }
+  };
+
   if (loading || !product) {
     return <div>Yükleniyor...</div>;
   }
 
   const discountedPrice = product.price * 0.8; // %20 indirim örneği
 
-  const handleReviewSubmit = () => {
-    // Burada yorum gönderme işlemi yapılacak
-    setShowReviewModal(false);
+  // Ürünün giyim kategorisinde olup olmadığını kontrol et
+  const isClothingProduct = product && clothingCategories.some(category => 
+    product.category?.toLowerCase().includes(category.toLowerCase())
+  );
+
+  const handleReviewSubmit = async () => {
+    if (!user) {
+      // Kullanıcı giriş yapmamışsa giriş sayfasına yönlendir
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      const reviewData = {
+        product_id: productId,
+        user_id: user.id,
+        rating,
+        comment
+      };
+
+      if (userReview) {
+        // Mevcut yorumu güncelle
+        const { error } = await supabase
+          .from('product_reviews')
+          .update(reviewData)
+          .eq('id', userReview.id);
+
+        if (error) throw error;
+      } else {
+        // Yeni yorum ekle
+        const { error } = await supabase
+          .from('product_reviews')
+          .insert(reviewData);
+
+        if (error) throw error;
+      }
+
+      // Yorumları yeniden yükle
+      await fetchReviews();
+      
+      // Formu temizle ve kapat
+      setShowReviewForm(false);
     setRating(0);
     setComment('');
+      
+    } catch (error) {
+      console.error('Yorum gönderilirken hata:', error);
+      alert('Yorum gönderilirken bir hata oluştu. Lütfen tekrar deneyin.');
+    }
   };
 
   const handleAddToCart = async () => {
@@ -342,7 +436,8 @@ export function ProductDetail() {
               </Stack>
             </Paper>
 
-            {/* Beden Seçimi */}
+            {/* Beden Seçimi - Sadece giyim ürünleri için göster */}
+            {isClothingProduct && (
             <Paper p="md" radius="md" withBorder>
               <Stack spacing="sm">
                 <Group position="apart">
@@ -373,6 +468,7 @@ export function ProductDetail() {
                 </Group>
               </Stack>
             </Paper>
+            )}
 
             {/* Miktar Seçimi */}
             <Paper p="md" radius="md" withBorder>
@@ -433,58 +529,216 @@ export function ProductDetail() {
       </Grid>
 
       {/* Değerlendirmeler ve Ürün Özellikleri */}
-      <Container size="xl" my="xl" style={{ backgroundColor: 'white' }}>
+      <Container size="xl" my="xl">
         <Grid>
           {/* Değerlendirmeler */}
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Paper p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Stack spacing="md" style={{ flex: 1 }}>
-                <Group position="apart">
+            <Paper 
+              p="xl" 
+              radius="lg" 
+              withBorder 
+              style={{ 
+                height: '100%', 
+                backgroundColor: 'white',
+                boxShadow: '0 2px 15px rgba(0, 0, 0, 0.04)',
+                border: '1px solid rgba(0, 0, 0, 0.06)'
+              }}
+            >
+              <Stack spacing="xl">
+                {/* Başlık ve Yorum Yapma Butonu */}
+                <Group position="apart" align="flex-start">
                   <div>
-                    <Text fw={500} size="lg">Değerlendirmeler</Text>
-                    <Group spacing="xs" mt="xs">
-                      <Rating value={4.5} fractions={2} readOnly />
-                      <Text size="sm" c="dimmed">(12 değerlendirme)</Text>
+                    <Text fw={600} size="xl" mb="xs">
+                      Değerlendirmeler ({reviewStats?.total_reviews || 0})
+                    </Text>
+                    <Group spacing="xs">
+                      <Rating value={reviewStats?.average_rating || 0} fractions={2} readOnly size="lg" />
+                      <Text size="lg" fw={500} c="dimmed">
+                        {reviewStats?.average_rating?.toFixed(1) || '0.0'}
+                      </Text>
                     </Group>
                   </div>
+                  {user ? (
                   <Button 
-                    variant="light"
-                    leftSection={<IconMessageCircle size={16} />}
-                    onClick={() => setShowReviewModal(true)}
-                    size="sm"
-                  >
-                    Yorum Yap
+                      variant="filled"
+                      leftSection={<IconMessageCircle size={18} />}
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      radius="md"
+                      size="md"
+                      style={{
+                        background: 'linear-gradient(45deg, #228BE6, #4C6EF5)',
+                        boxShadow: '0 4px 14px rgba(76, 110, 245, 0.25)'
+                      }}
+                    >
+                      {userReview ? 'Yorumunu Düzenle' : 'Değerlendir'}
                   </Button>
+                  ) : (
+                    <Button 
+                      variant="filled"
+                      onClick={() => navigate('/auth')}
+                      radius="md"
+                      size="md"
+                    >
+                      Giriş Yap ve Değerlendir
+                    </Button>
+                  )}
                 </Group>
 
-                <Divider />
+                {/* Inline Değerlendirme Formu */}
+                {showReviewForm && (
+                  <Paper 
+                    p="lg" 
+                    radius="md" 
+                    withBorder
+                    style={{
+                      backgroundColor: '#F8F9FA',
+                      border: '1px solid #E9ECEF',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <Stack spacing="md">
+                      <Text fw={500} size="sm">Puanınız</Text>
+                      <Rating 
+                        value={rating} 
+                        onChange={setRating}
+                        size="xl"
+                        color="yellow"
+                        style={{ cursor: 'pointer' }}
+                      />
+                      
+                      <Text fw={500} size="sm" mt="md">Yorumunuz</Text>
+                      <Textarea
+                        value={comment}
+                        onChange={(e) => setComment(e.currentTarget.value)}
+                        placeholder="Ürün hakkında düşüncelerinizi paylaşın..."
+                        minRows={3}
+                        maxRows={5}
+                        radius="md"
+                        style={{ backgroundColor: 'white' }}
+                      />
+                      
+                      <Group position="right" mt="md">
+                        <Button 
+                          variant="default" 
+                          onClick={() => {
+                            setShowReviewForm(false);
+                            setRating(0);
+                            setComment('');
+                          }}
+                          radius="md"
+                        >
+                          İptal
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            handleReviewSubmit();
+                            setShowReviewForm(false);
+                          }}
+                          disabled={!rating || !comment.trim()}
+                          radius="md"
+                          style={{
+                            background: 'linear-gradient(45deg, #228BE6, #4C6EF5)',
+                            boxShadow: '0 4px 14px rgba(76, 110, 245, 0.25)'
+                          }}
+                        >
+                          Değerlendirmeyi Gönder
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Paper>
+                )}
 
-                <Stack spacing="lg" style={{ minHeight: '150px' }}>
+                {/* Yıldız Dağılımı */}
+                <Paper p="lg" radius="md" bg="gray.0">
+                  <Stack spacing="xs">
+                    {[5, 4, 3, 2, 1].map((star) => (
+                      <Group key={star} spacing="xs" style={{ flexWrap: 'nowrap' }}>
+                        <Text size="sm" w={15} fw={500}>{star}</Text>
+                        <IconStar size={14} />
+                        <div style={{ 
+                          flex: 1, 
+                          height: '8px', 
+                          backgroundColor: '#E9ECEF',
+                          borderRadius: '4px',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: `${((reviewStats?.rating_distribution?.[star] || 0) / Math.max(reviewStats?.total_reviews || 1, 1) * 100)}%`,
+                            height: '100%',
+                            backgroundColor: star >= 4 ? '#51CF66' : star === 3 ? '#FAB005' : '#FF6B6B',
+                            transition: 'width 0.3s ease'
+                          }} />
+                        </div>
+                        <Text size="sm" w={30} align="right" fw={500}>
+                          {reviewStats?.rating_distribution?.[star] || 0}
+                        </Text>
+                      </Group>
+                    ))}
+                  </Stack>
+                </Paper>
+
+                {/* Yorumlar Listesi */}
+                <Stack spacing="lg">
                   {(showAllReviews ? reviews : reviews.slice(0, initialReviewsToShow)).map((review) => (
-                    <div key={review.id}>
-                      <Group position="apart">
-                        <Group>
-                          <Avatar color="blue" radius="xl">{review.user.charAt(0)}</Avatar>
+                    <Paper
+                      key={review.id}
+                      p="lg"
+                      radius="md"
+                      style={{
+                        backgroundColor: '#F8F9FA',
+                        border: '1px solid #E9ECEF',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Group position="apart" mb="md">
+                        <Group spacing="sm" style={{ flexWrap: 'nowrap' }}>
+                          <Avatar 
+                            radius="xl" 
+                            size="md"
+                            style={{
+                              background: 'linear-gradient(45deg, #228BE6, #4C6EF5)',
+                              border: '2px solid white',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            {review.user_email?.charAt(0).toUpperCase() || 'K'}
+                          </Avatar>
                           <div>
-                            <Text size="sm" fw={500}>{review.user}</Text>
-                            <Rating value={review.rating} readOnly size="xs" />
+                            <Text fw={600} size="sm" style={{ color: '#1A1B1E' }}>
+                              {review.user_full_name || review.user_email?.split('@')[0] || 'Kullanıcı'}
+                            </Text>
+                            <Rating value={review.rating} readOnly size="sm" />
                           </div>
                         </Group>
-                        <Text size="xs" c="dimmed">{new Date(review.date).toLocaleDateString('tr-TR')}</Text>
+                        <Badge 
+                          variant="dot" 
+                          color="blue"
+                          size="lg"
+                          style={{ padding: '0.5rem 0.8rem' }}
+                        >
+                          {new Date(review.created_at).toLocaleDateString('tr-TR')}
+                        </Badge>
                       </Group>
-                      <Text size="sm" mt="xs">{review.comment}</Text>
-                    </div>
+                      <Text size="sm" lh={1.6} style={{ color: '#495057' }}>
+                        {review.comment}
+                      </Text>
+                    </Paper>
                   ))}
                 </Stack>
 
+                {/* Daha Fazla Göster Butonu */}
                 {reviews.length > initialReviewsToShow && (
                   <Button 
-                    variant="outline"
+                    variant="light"
                     onClick={() => setShowAllReviews(!showAllReviews)}
-                    size="sm"
-                    mt="md"
                     fullWidth
+                    radius="md"
                     color="blue"
+                    style={{ 
+                      fontWeight: 500,
+                      background: 'linear-gradient(to right, #E7F5FF, #E7F5FF)',
+                      transition: 'all 0.2s'
+                    }}
                   >
                     {showAllReviews ? 'Daha az göster' : 'Tüm değerlendirmeleri göster'}
                   </Button>
@@ -495,35 +749,71 @@ export function ProductDetail() {
 
           {/* Ürün Özellikleri */}
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Paper p="lg" radius="md" withBorder style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Stack spacing="md" style={{ flex: 1 }}>
-                <Text fw={500} size="lg">Ürün Özellikleri</Text>
-                
-                <Divider />
+            <Paper 
+              p="xl" 
+              radius="lg" 
+              withBorder 
+              style={{ 
+                height: '100%',
+                backgroundColor: 'white',
+                boxShadow: '0 2px 15px rgba(0, 0, 0, 0.04)',
+                border: '1px solid rgba(0, 0, 0, 0.06)'
+              }}
+            >
+              <Stack spacing="xl">
+                <Text fw={600} size="xl" mb="lg">
+                  Ürün Özellikleri
+                </Text>
                 
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: '1fr 2fr',
-                  gap: '12px',
-                  fontSize: '14px',
-                  minHeight: '150px'
+                  gap: '1rem',
+                  fontSize: '14px'
                 }}>
-                  {(showAllFeatures ? Object.entries(productFeatures) : Object.entries(productFeatures).slice(0, initialFeaturesToShow)).map(([key, value]) => (
+                  {(showAllFeatures ? Object.entries(productFeatures) : Object.entries(productFeatures).slice(0, initialFeaturesToShow)).map(([key, value], index) => (
                     <React.Fragment key={key}>
-                      <Text fw={500} c="dimmed">{key}</Text>
-                      <Text>{value}</Text>
+                      <Paper
+                        p="md"
+                        style={{
+                          backgroundColor: index % 2 === 0 ? '#F8F9FA' : 'white',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          border: '1px solid #E9ECEF'
+                        }}
+                      >
+                        <Text fw={600} size="sm" c="dimmed">{key}</Text>
+                      </Paper>
+                      <Paper
+                        p="md"
+                        style={{
+                          backgroundColor: index % 2 === 0 ? '#F8F9FA' : 'white',
+                          borderRadius: '8px',
+                          border: '1px solid #E9ECEF',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Text size="sm">{value}</Text>
+                      </Paper>
                     </React.Fragment>
                   ))}
                 </div>
 
+                {/* Daha Fazla Göster Butonu */}
                 {Object.entries(productFeatures).length > initialFeaturesToShow && (
                   <Button 
-                    variant="outline"
+                    variant="light"
                     onClick={() => setShowAllFeatures(!showAllFeatures)}
-                    size="sm"
-                    mt="md"
                     fullWidth
+                    radius="md"
                     color="blue"
+                    style={{ 
+                      fontWeight: 500,
+                      background: 'linear-gradient(to right, #E7F5FF, #E7F5FF)',
+                      transition: 'all 0.2s'
+                    }}
                   >
                     {showAllFeatures ? 'Daha az göster' : 'Tüm özellikleri göster'}
                   </Button>
@@ -726,44 +1016,6 @@ export function ProductDetail() {
             ))}
           </tbody>
         </Table>
-      </Modal>
-
-      {/* Yorum Yapma Modalı */}
-      <Modal
-        opened={showReviewModal}
-        onClose={() => setShowReviewModal(false)}
-        title="Ürünü Değerlendir"
-        size="md"
-      >
-        <Stack spacing="md">
-          <div>
-            <Text size="sm" fw={500} mb="xs">Puanınız</Text>
-            <Rating 
-              value={rating} 
-              onChange={setRating}
-              size="lg"
-              emptySymbol={<IconStar size={24} />}
-              fullSymbol={<IconStarFilled size={24} />}
-            />
-          </div>
-
-          <div>
-            <Text size="sm" fw={500} mb="xs">Yorumunuz</Text>
-            <Textarea
-              value={comment}
-              onChange={(e) => setComment(e.currentTarget.value)}
-              placeholder="Ürün hakkında düşüncelerinizi paylaşın..."
-              minRows={4}
-            />
-          </div>
-
-          <Group position="right" mt="md">
-            <Button variant="default" onClick={() => setShowReviewModal(false)}>İptal</Button>
-            <Button onClick={handleReviewSubmit} disabled={!rating || !comment.trim()}>
-              Gönder
-            </Button>
-          </Group>
-        </Stack>
       </Modal>
     </div>
   );

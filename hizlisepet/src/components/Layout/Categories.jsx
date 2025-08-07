@@ -139,7 +139,7 @@ export function Categories() {
     <Stack spacing={0}>
       {categories.map((category, index) => (
         <div key={category.name}>
-          {index > 0 && <Divider my={5} />}
+          {index > 0 && <Divider my={2} variant="dashed" opacity={0.3} />}
           
           <Button
             variant={expandedCategory === category.name ? "light" : "subtle"}
@@ -147,11 +147,23 @@ export function Categories() {
             onClick={() => handleCategoryClick(category.name)}
             rightSection={
               category.subcategories && (
-                <div onClick={(e) => toggleCategory(category.name, e)}>
+                <div onClick={(e) => toggleCategory(category.name, e)}
+                style={{
+                  backgroundColor: '#2C3E50',
+                  borderRadius: '4px',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  marginLeft: '8px'
+                }}
+                >
                   {expandedCategory === category.name ? (
-                    <IconChevronDown size={16} stroke={2} />
+                    <IconChevronDown size={14} stroke={2} color="#ffffff" />
                   ) : (
-                    <IconChevronRight size={16} stroke={2} />
+                    <IconChevronRight size={14} stroke={2} color="#ffffff" />
                   )}
                 </div>
               )
@@ -160,10 +172,10 @@ export function Categories() {
             styles={(theme) => ({
               root: {
                 color: '#333',
-                padding: '10px 15px',
+                padding: '8px 12px',
                 height: 'auto',
                 justifyContent: 'space-between',
-                fontWeight: 600,
+                fontWeight: 500,
                 borderRadius: theme.radius.md,
                 backgroundColor: expandedCategory === category.name ? theme.colors.blue[0] : 'transparent',
                 '&:hover': {
@@ -174,7 +186,8 @@ export function Categories() {
                 justifyContent: 'flex-start'
               },
               label: {
-                fontSize: '0.9rem'
+                fontSize: '0.85rem',
+                letterSpacing: '-0.2px'
               }
             })}
           >
@@ -183,7 +196,7 @@ export function Categories() {
           
           {category.subcategories && (
             <Collapse in={expandedCategory === category.name}>
-              <Stack spacing={0} pl={10} py={5} style={{ backgroundColor: '#f9f9f9', borderRadius: '0 0 4px 4px' }}>
+              <Stack spacing={0} pl={8} py={3} style={{ backgroundColor: '#f8f9fa', borderRadius: '0 0 4px 4px' }}>
                 {category.subcategories.map((subcat) => (
                   <Button
                     key={subcat}
@@ -193,18 +206,15 @@ export function Categories() {
                     styles={(theme) => ({
                       root: {
                         color: '#555',
-                        padding: '6px 10px',
+                        padding: '4px 8px',
                         height: 'auto',
                         justifyContent: 'flex-start',
                         borderRadius: 0,
+                        fontSize: '0.8rem',
+                        fontWeight: 400,
                         '&:hover': {
-                          backgroundColor: theme.colors.gray[1],
-                          color: theme.colors.blue[7]
+                          backgroundColor: theme.colors.gray[1]
                         }
-                      },
-                      label: {
-                        fontSize: '0.85rem',
-                        fontWeight: 'normal'
                       }
                     })}
                   >

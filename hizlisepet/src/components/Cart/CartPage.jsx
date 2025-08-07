@@ -69,7 +69,7 @@ export function CartPage() {
     setUpdating(true);
     const success = await updateQuantity(itemId, newQuantity);
     setUpdating(false);
-
+    
     if (!success) {
       notifications.show({
         title: 'Hata',
@@ -95,7 +95,7 @@ export function CartPage() {
     setUpdating(true);
     const success = await removeFromCart(itemToRemove.id);
     setUpdating(false);
-
+    
     if (success) {
       notifications.show({
         title: 'Başarılı',
@@ -196,14 +196,14 @@ export function CartPage() {
       
       <Group justify="space-between" mb="lg">
         <Title order={1}>Sepetim</Title>
-        <Button 
-          variant="subtle" 
-          color="red" 
-          onClick={openClearModal}
-          leftSection={<IconTrash size={16} />}
-        >
-          Sepeti Temizle
-        </Button>
+          <Button 
+            variant="subtle" 
+            color="red" 
+            onClick={openClearModal}
+            leftSection={<IconTrash size={16} />}
+          >
+            Sepeti Temizle
+          </Button>
       </Group>
 
       <Grid>
@@ -213,22 +213,22 @@ export function CartPage() {
             {cartItems.map((item) => {
               const product = item.product;
               if (!product) return null;
-
+              
               return (
                 <Paper key={item.id} p="md" withBorder>
                   <Group position="apart" align="flex-start">
                     <Group align="flex-start" spacing="lg" style={{ flex: 1 }}>
-                      <Image
+                    <Image
                         src={product.image_url}
                         width={120}
                         height={120}
                         radius="md"
                         alt={product.name}
-                      />
-                      <Box style={{ flex: 1 }}>
+                    />
+                    <Box style={{ flex: 1 }}>
                         <Text size="lg" fw={500} mb="xs" lineClamp={2}>
-                          {product.name}
-                        </Text>
+                        {product.name}
+                      </Text>
                         <Group spacing="xs" mb="sm">
                           <Badge color="blue" variant="light">
                             {product.category}
@@ -236,39 +236,39 @@ export function CartPage() {
                           <Badge color="gray" variant="outline">
                             {product.brand}
                           </Badge>
-                        </Group>
+                      </Group>
                         <Group spacing="xl">
                           <Group spacing="xs">
-                            <ActionIcon
-                              variant="light"
+                        <ActionIcon
+                          variant="light"
                               onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                               disabled={item.quantity <= 1}
-                            >
+                        >
                               <IconMinus size={16} />
-                            </ActionIcon>
+                        </ActionIcon>
                             <Text fw={500} w={40} ta="center">
                               {item.quantity}
                             </Text>
-                            <ActionIcon
-                              variant="light"
+                        <ActionIcon
+                          variant="light"
                               onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                            >
+                        >
                               <IconPlus size={16} />
-                            </ActionIcon>
+                        </ActionIcon>
                           </Group>
                           <Text fw={700} size="lg" c="blue">
                             {formatPrice(item.price * item.quantity)}
                           </Text>
                         </Group>
                       </Box>
-                    </Group>
-                    <ActionIcon
-                      color="red"
-                      variant="light"
-                      onClick={() => openRemoveModal(item)}
-                    >
+                      </Group>
+                      <ActionIcon 
+                        color="red" 
+                        variant="light"
+                        onClick={() => openRemoveModal(item)}
+                      >
                       <IconTrash size={18} />
-                    </ActionIcon>
+                      </ActionIcon>
                   </Group>
                 </Paper>
               );

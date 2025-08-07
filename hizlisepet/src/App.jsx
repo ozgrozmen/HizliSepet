@@ -13,8 +13,7 @@ import { CartPage } from './components/Cart/CartPage';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import { CartProvider } from './context/CartContext';
-import Login from './components/Auth/Login';
-import SignUp from './components/Auth/SignUp';
+import AuthPage from './components/Auth/AuthPage';
 import AdminLayout from './components/Admin/AdminLayout';
 import Dashboard from './components/Admin/Dashboard';
 import Products from './components/Admin/Products';
@@ -25,6 +24,7 @@ import { NewCategoryPage } from './pages/admin/NewCategoryPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ProtectedRoute } from './components/Admin/ProtectedRoute';
+import AuthCallback from './components/Auth/AuthCallback';
 
 // Loading component
 function LoadingScreen() {
@@ -127,8 +127,12 @@ function AuthenticatedApp() {
                       <CheckoutPage />
                     </Layout>
                   } />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<SignUp />} />
+              
+              {/* Auth Routes */}
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/signup" element={<AuthPage />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
                 </Routes>
               </div>
             </Router>

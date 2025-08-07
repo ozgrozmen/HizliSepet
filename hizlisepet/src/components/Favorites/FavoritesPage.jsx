@@ -37,7 +37,7 @@ export function FavoritesPage() {
       navigate('/login', { state: { returnUrl: '/favorites' } });
       return;
     }
-
+    
     fetchFavoriteProducts();
   }, [user, favorites, authLoading, favoritesLoading, navigate]);
 

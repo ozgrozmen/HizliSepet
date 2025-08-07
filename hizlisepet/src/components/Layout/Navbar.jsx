@@ -63,7 +63,7 @@ export const Navbar = React.memo(() => {
   const searchResultsRef = useClickOutside(() => {
     setShowResults(false);
   });
-
+  
   // Cart count'u memoize et
   const cartItemCount = useMemo(() => getCartItemCount(), [getCartItemCount]);
 
@@ -159,23 +159,6 @@ export const Navbar = React.memo(() => {
       <Container fluid style={{ maxWidth: '100%', height: '100%', padding: 0 }}>
         <Group style={{ height: '100%', padding: '0 20px' }} justify="space-between">
           <Group gap="md">
-            <ActionIcon
-              variant="default"
-              size="lg"
-              radius="md"
-              onClick={handleSidebarOpen}
-              onMouseEnter={handleSidebarOpen}
-              sx={(theme) => ({
-                backgroundColor: theme.colors.gray[0],
-                border: `1px solid ${theme.colors.gray[3]}`,
-                '&:hover': {
-                  backgroundColor: theme.colors.gray[1],
-                }
-              })}
-            >
-              <IconMenu2 size={22} />
-            </ActionIcon>
-            
             {/* Logo */}
             <h1 
               style={{ 
@@ -192,9 +175,9 @@ export const Navbar = React.memo(() => {
 
           {/* Arama */}
           <Box style={{ width: '40%', maxWidth: '500px', position: 'relative' }} ref={searchResultsRef}>
-            <TextInput
+          <TextInput
               placeholder="Ürün, marka veya kategori ara..."
-              leftSection={<IconSearch size={16} />}
+            leftSection={<IconSearch size={16} />}
               rightSection={
                 searchTerm ? (
                   isSearching ? (
@@ -314,9 +297,9 @@ export const Navbar = React.memo(() => {
           {/* Sağ Menü */}
           <Group>
             {/* Favoriler */}
-            <ActionIcon
-              variant="subtle"
-              size="lg"
+            <ActionIcon 
+              variant="subtle" 
+              size="lg" 
               onClick={handleFavoritesClick}
               color="gray"
             >
@@ -325,21 +308,21 @@ export const Navbar = React.memo(() => {
 
             {/* Sepet */}
             <div style={{ position: 'relative' }}>
-              <ActionIcon
-                variant="subtle"
-                size="lg"
+              <ActionIcon 
+                variant="subtle" 
+                size="lg" 
                 onClick={handleCartClick}
                 color="gray"
               >
                 <IconShoppingCart size={22} stroke={1.5} />
               </ActionIcon>
               {cartItemCount > 0 && (
-                <Badge
-                  size="xs"
+                <Badge 
+                  size="xs" 
                   variant="filled"
-                  style={{
-                    position: 'absolute',
-                    top: -5,
+                  style={{ 
+                    position: 'absolute', 
+                    top: -5, 
                     right: -5,
                     pointerEvents: 'none'
                   }}
@@ -352,56 +335,56 @@ export const Navbar = React.memo(() => {
             {/* Kullanıcı Menüsü */}
             {!loading && (
               user ? (
-                <Menu shadow="md" width={200}>
-                  <Menu.Target>
+  <Menu shadow="md" width={200}>
+    <Menu.Target>
                     <ActionIcon
                       variant="subtle"
                       size="lg"
                       color="gray"
                     >
                       <IconUser size={22} stroke={1.5} />
-                    </ActionIcon>
-                  </Menu.Target>
+      </ActionIcon>
+    </Menu.Target>
 
-                  <Menu.Dropdown>
+    <Menu.Dropdown>
                     <Menu.Label>Hesap</Menu.Label>
-                    <Menu.Item onClick={() => navigate('/profile')}>
-                      Profilim
-                    </Menu.Item>
-                    <Menu.Item onClick={() => navigate('/orders')}>
-                      Siparişlerim
-                    </Menu.Item>
-                    {showAdminPanel && (
-                      <>
-                        <Menu.Divider />
+      <Menu.Item onClick={() => navigate('/profile')}>
+        Profilim
+      </Menu.Item>
+      <Menu.Item onClick={() => navigate('/orders')}>
+        Siparişlerim
+      </Menu.Item>
+      {showAdminPanel && (
+        <>
+          <Menu.Divider />
                         <Menu.Label>Yönetim</Menu.Label>
-                        <Menu.Item 
+          <Menu.Item 
                           leftSection={<IconDashboard size={14} />}
-                          onClick={() => navigate('/admin')}
-                        >
-                          Admin Paneli
-                        </Menu.Item>
-                      </>
-                    )}
-                    <Menu.Divider />
+            onClick={() => navigate('/admin')} 
+          >
+            Admin Paneli
+          </Menu.Item>
+        </>
+      )}
+      <Menu.Divider />
                     <Menu.Item color="red" onClick={handleSignOut}>
-                      Çıkış Yap
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
+        Çıkış Yap
+      </Menu.Item>
+    </Menu.Dropdown>
+  </Menu>
               ) : (
-                <Button
+    <Button 
                   variant="light"
-                  leftSection={<IconLogin size={16} />}
-                  onClick={() => navigate('/login')}
+      leftSection={<IconLogin size={16} />}
+      onClick={() => navigate('/login')}
                   radius="xl"
-                >
-                  Giriş Yap
-                </Button>
+    >
+      Giriş Yap
+    </Button>
               )
             )}
           </Group>
-        </Group>
+  </Group>
       </Container>
 
       {/* Kategoriler Drawer */}
@@ -419,4 +402,4 @@ export const Navbar = React.memo(() => {
 });
 
 // Display name'leri ekle
-Navbar.displayName = 'Navbar'; 
+Navbar.displayName = 'Navbar';

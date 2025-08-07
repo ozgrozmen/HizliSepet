@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { ChatShortcut } from '../ChatShortcut';
+import { SidebarToggle } from './SidebarToggle';
 
 export function Layout({ children }) {
   return (
@@ -20,6 +21,7 @@ export function Layout({ children }) {
       </main>
       <Footer />
       <ChatShortcut />
+      <SidebarToggle />
     </div>
   );
 }

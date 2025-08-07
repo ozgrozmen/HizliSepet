@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Container, Grid, Loader, Center, Text } from '@mantine/core';
+import { Container, Grid, Loader, Center, Text, Title, Breadcrumbs, Anchor, Group, Badge, Select } from '@mantine/core';
+import { IconHome, IconChevronRight } from '@tabler/icons-react';
 import { supabase } from '../../lib/supabase';
 import { ProductCard } from '../Product/ProductCard';
 
@@ -17,16 +18,8 @@ function formatCategoryName(category) {
     'Kozmetik': 'Kozmetik'
   };
 
-  // URL'den gelen kategori adını decode et
   const decodedCategory = decodeURIComponent(category);
-  
-  // Özel kategori adı varsa onu kullan
-  if (specialCategories[decodedCategory]) {
-    return specialCategories[decodedCategory];
-  }
-
-  // Yoksa normal formatlama yap
-  return decodedCategory
+  return specialCategories[decodedCategory] || decodedCategory
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -37,6 +30,7 @@ export function CategoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState('newest');
 
   useEffect(() => {
     async function fetchProducts() {
@@ -44,49 +38,33 @@ export function CategoryPage() {
         setLoading(true);
         setError(null);
 
-        console.log('URL category:', category);
-        console.log('URL subcategory:', subcategory);
-
-        // URL'den gelen kategori adını düzenleme
         const formattedCategory = formatCategoryName(category);
-        console.log('Aranacak kategori:', formattedCategory);
-
         let query = supabase.from('products').select('*');
 
         if (subcategory) {
-          // Alt kategori için format
           const formattedSubcategory = formatCategoryName(subcategory);
-          console.log('Aranacak alt kategori:', formattedSubcategory);
-
-          // Alt kategori araması - case insensitive
           const { data, error } = await query
             .ilike('category', formattedCategory)
             .ilike('subcategory', formattedSubcategory);
 
           if (error) {
-            console.error('Alt kategori aramasında hata:', error);
             setError(error.message);
             setProducts([]);
           } else {
-            console.log('Alt kategori sonuçları:', data);
             setProducts(data || []);
           }
         } else {
-          // Ana kategori araması - case insensitive
           const { data, error } = await query
             .ilike('category', formattedCategory);
 
           if (error) {
-            console.error('Ana kategori aramasında hata:', error);
             setError(error.message);
             setProducts([]);
           } else {
-            console.log('Ana kategori sonuçları:', data);
             setProducts(data || []);
           }
         }
       } catch (err) {
-        console.error('Beklenmeyen bir hata oluştu:', err);
         setError('Ürünler yüklenirken bir hata oluştu');
         setProducts([]);
       } finally {
@@ -96,6 +74,22 @@ export function CategoryPage() {
 
     fetchProducts();
   }, [category, subcategory]);
+
+  const sortProducts = (products) => {
+    const sortedProducts = [...products];
+    switch (sortBy) {
+      case 'price-asc':
+        return sortedProducts.sort((a, b) => a.price - b.price);
+      case 'price-desc':
+        return sortedProducts.sort((a, b) => b.price - a.price);
+      case 'newest':
+        return sortedProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      case 'name-asc':
+        return sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return sortedProducts;
+    }
+  };
 
   if (loading) {
     return (
@@ -116,8 +110,21 @@ export function CategoryPage() {
   const formattedCategory = formatCategoryName(category);
   const formattedSubcategory = subcategory ? formatCategoryName(subcategory) : null;
 
+  const breadcrumbItems = [
+    { title: 'Ana Sayfa', href: '/', icon: <IconHome size={16} /> },
+    { title: formattedCategory, href: `/category/${category}` },
+    ...(subcategory ? [{ title: formattedSubcategory, href: `/category/${category}/${subcategory}` }] : [])
+  ];
+
+  const sortOptions = [
+    { value: 'newest', label: 'En Yeniler' },
+    { value: 'price-asc', label: 'Fiyat (Düşükten Yükseğe)' },
+    { value: 'price-desc', label: 'Fiyat (Yüksekten Düşüğe)' },
+    { value: 'name-asc', label: 'İsme Göre (A-Z)' }
+  ];
+
   return (
-    <div style={{ width: '100%', backgroundColor: '#f8f9fa' }}>
+    <div style={{ width: '100%', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
       <div style={{
         width: '100%',
         backgroundColor: 'white',
@@ -125,9 +132,45 @@ export function CategoryPage() {
         marginBottom: '2rem',
         borderBottom: '1px solid #e9ecef'
       }}>
-        <Text size="xl" weight={700} ta="center">
-          {formattedSubcategory || formattedCategory}
-        </Text>
+        <Container size="xl">
+          <Breadcrumbs
+            separator={<IconChevronRight size={16} />}
+            mb="xl"
+          >
+            {breadcrumbItems.map((item, index) => (
+              <Anchor
+                key={index}
+                href={item.href}
+                style={{
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {item.icon}
+                {item.title}
+              </Anchor>
+            ))}
+          </Breadcrumbs>
+
+          <Title order={1} size="h2" weight={700}>
+            {formattedSubcategory || formattedCategory}
+          </Title>
+          
+          <Group position="apart" mt="md">
+            <Badge size="lg" variant="light">
+              {products.length} Ürün
+            </Badge>
+            <Select
+              value={sortBy}
+              onChange={setSortBy}
+              data={sortOptions}
+              style={{ width: '250px' }}
+              placeholder="Sıralama"
+            />
+          </Group>
+        </Container>
       </div>
 
       {products.length === 0 ? (
@@ -137,24 +180,12 @@ export function CategoryPage() {
           </Text>
         </Center>
       ) : (
-        <Container fluid style={{ maxWidth: '100%', padding: '0 40px', marginBottom: '40px' }}>
-          <Grid
-            gutter={50}
-            style={{
-              margin: 0,
-              width: '100%',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '20px'
-            }}
-          >
-            {products.map((product) => (
+        <Container size="xl" pb="xl">
+          <Grid gutter="xl">
+            {sortProducts(products).map((product) => (
               <Grid.Col
                 key={product.id}
                 span={{ base: 12, xs: 6, sm: 4, md: 3 }}
-                style={{
-                  padding: '10px'
-                }}
               >
                 <ProductCard product={product} />
               </Grid.Col>

@@ -70,7 +70,7 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-
+      
       // Önce ürünün sepette olup olmadığını kontrol et
       const existingItem = cartItems.find(item => item.product_id === product.id);
 
@@ -91,9 +91,9 @@ export function CartProvider({ children }) {
         const { error } = await supabase
           .from('cart_items')
           .insert([{
-            user_id: user.id,
-            product_id: product.id,
-            quantity,
+              user_id: user.id, 
+              product_id: product.id, 
+              quantity, 
             price: product.discount_price || product.price
           }]);
 
@@ -122,7 +122,7 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-
+      
       const { error } = await supabase
         .from('cart_items')
         .delete()
@@ -152,7 +152,7 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-
+      
       const { error } = await supabase
         .from('cart_items')
         .update({ quantity })
@@ -184,7 +184,7 @@ export function CartProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-
+      
       const { error } = await supabase
         .from('cart_items')
         .delete()
@@ -220,14 +220,14 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems,
-      loading,
+        cartItems,
+        loading,
       error,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      getCartTotal,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        getCartTotal,
       getCartItemCount,
       refetch: fetchCartItems
     }}>

@@ -81,7 +81,7 @@ export function ChatShortcut() {
 
       if (error) throw error;
       return orders;
-    } catch (ercd ror) {
+    } catch (error) {
       console.error('Siparişler alınırken hata:', error);
       return null;
     }
@@ -510,5 +510,7 @@ export function ChatShortcut() {
         <IconMessageCircle2 size={32} />
       </Button>
     </>
+
+    
   );
 }

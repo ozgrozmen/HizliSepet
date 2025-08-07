@@ -248,30 +248,110 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const signIn = useCallback(async (email, password) => {
-    setLoading(true);
-    setAuthError(null);
-    
+  const signIn = async (email, password) => {
     try {
+      // Önce session'ı yenile
+      await supabase.auth.refreshSession();
+
+      // Giriş denemesi
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        setAuthError(error.message);
-        throw error;
+        // Özel hata mesajları
+        const errorMessages = {
+          'Invalid login credentials': 'E-posta adresi veya şifre hatalı.',
+          'Email not confirmed': 'E-posta adresiniz henüz doğrulanmamış. Lütfen e-postanızı kontrol edin ve doğrulama bağlantısına tıklayın.',
+          'Too many requests': 'Çok fazla giriş denemesi yaptınız. Lütfen bir süre bekleyin.',
+          'Rate limit exceeded': 'Çok fazla giriş denemesi yaptınız. Lütfen bir süre bekleyin.'
+        };
+
+        // E-posta doğrulanmamışsa yeni doğrulama e-postası gönder
+        if (error.message === 'Email not confirmed') {
+          // Son e-posta gönderim zamanını localStorage'dan kontrol et
+          const lastEmailSent = localStorage.getItem('lastVerificationEmailSent');
+          const now = Date.now();
+          const waitTime = 20000; // 20 saniye (18 saniye + buffer)
+
+          if (!lastEmailSent || (now - parseInt(lastEmailSent)) > waitTime) {
+            try {
+              const { error: resendError } = await supabase.auth.resend({
+                type: 'signup',
+                email,
+                options: {
+                  emailRedirectTo: window.location.origin + '/auth/callback'
+                }
+              });
+
+              if (resendError) {
+                if (resendError.message.includes('security purposes')) {
+                  console.warn('⚠️ Lütfen yeni doğrulama e-postası istemeden önce biraz bekleyin');
+                } else {
+                  console.error('Doğrulama e-postası gönderilemedi:', resendError);
+                }
+              } else {
+                console.log('✉️ Yeni doğrulama e-postası gönderildi');
+                // Başarılı gönderim zamanını kaydet
+                localStorage.setItem('lastVerificationEmailSent', now.toString());
+              }
+            } catch (resendError) {
+              console.error('Doğrulama e-postası gönderme hatası:', resendError);
+            }
+          } else {
+            const remainingTime = Math.ceil((waitTime - (now - parseInt(lastEmailSent))) / 1000);
+            console.warn(`⚠️ Lütfen yeni doğrulama e-postası istemeden önce ${remainingTime} saniye bekleyin`);
+            error.message = `Lütfen yeni doğrulama e-postası istemeden önce ${remainingTime} saniye bekleyin. Önceki e-postayı kontrol etmeyi unutmayın.`;
+          }
+        }
+
+        const errorMessage = errorMessages[error.message] || error.message;
+        throw new Error(errorMessage);
       }
 
-      console.log('✅ Giriş başarılı:', data.user?.email);
-      return data;
+      if (!data?.user) {
+        throw new Error('Kullanıcı bilgileri alınamadı.');
+      }
+
+      // Kullanıcı profil bilgilerini kontrol et
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Profil bilgileri alınamadı:', profileError);
+      }
+
+      if (!profileData) {
+        // Profil yoksa oluştur
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: data.user.user_metadata?.full_name || '',
+            role: 'user',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          });
+
+        if (createProfileError) {
+          console.error('Profil oluşturulamadı:', createProfileError);
+        }
+      }
+
+      setUser(data.user);
+      return { user: data.user, error: null };
     } catch (error) {
       console.error('❌ Giriş hatası:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      return { user: null, error };
     }
-  }, []);
+  };
 
   const signOut = useCallback(async () => {
     setLoading(true);

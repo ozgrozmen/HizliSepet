@@ -27,6 +27,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
       'X-Client-Info': 'hizlisepet-web'
     }
   },
